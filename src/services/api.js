@@ -3,7 +3,7 @@
  * Handles all HTTP requests to the backend with error handling
  */
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 /**
  * Generic fetch wrapper with error handling
