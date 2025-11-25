@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline - School LMS</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      text-align: center;
+      max-width: 500px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .icon {
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 30px;
+      background: #f0f0f0;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 50px;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 28px;
+    }
+
+    p {
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 30px;
+    }
+
+    .retry-btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .retry-btn:hover {
+      background: #5568d3;
+    }
+
+    .tips {
+      margin-top: 30px;
+      padding-top: 30px;
+      border-top: 1px solid #e0e0e0;
+      text-align: left;
+    }
+
+    .tips h3 {
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+
+    .tips ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .tips li {
+      color: #666;
+      margin-bottom: 10px;
+      padding-left: 25px;
+      position: relative;
+    }
+
+    .tips li:before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #667eea;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">📡</div>
+    <h1>You're Offline</h1>
+    <p>
+      It looks like you've lost your internet connection. 
+      Don't worry, your exam progress is saved locally and will sync when you're back online.
+    </p>
+    
+    <button class="retry-btn" onclick="window.location.reload()">
+      Retry Connection
+    </button>
+
+    <div class="tips">
+      <h3>While you're offline:</h3>
+      <ul>
+        <li>Your exam answers are automatically saved</li>
+        <li>You can continue working on active exams</li>
+        <li>Data will sync when connection is restored</li>
+        <li>Some features may be limited</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    // Auto-reload when back online
+    window.addEventListener('online', () => {
+      window.location.reload();
+    });
+
+    // Check connection status
+    if (navigator.onLine) {
+      window.location.reload();
+    }
+  </script>
+</body>
+</html>
