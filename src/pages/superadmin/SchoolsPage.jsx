@@ -19,6 +19,7 @@ import {
   Globe,
   MoreVertical,
 } from 'lucide-react';
+import { schoolAPI } from '../../services/api';
 
 const SchoolsPage = () => {
   const [schools, setSchools] = useState([]);
@@ -26,30 +27,58 @@ const SchoolsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingSchool, setEditingSchool] = useState(null);
+  const [error, setError] = useState('');
 
+  // Fetch schools from API
   useEffect(() => {
-    const sampleSchools = [
-      { id: 1, name: 'École Saint-Jean', code: 'ESJ', address: 'Pétion-Ville, Haïti', phone: '+509 2222-1111', email: 'contact@saintjean.edu.ht', students: 450, teachers: 28, status: 'active', type: 'Primaire & Secondaire' },
-      { id: 2, name: 'Lycée National', code: 'LN', address: 'Port-au-Prince, Haïti', phone: '+509 2222-2222', email: 'info@lyceenational.edu.ht', students: 680, teachers: 42, status: 'active', type: 'Secondaire' },
-      { id: 3, name: 'Collège Central', code: 'CC', address: 'Delmas, Haïti', phone: '+509 2222-3333', email: 'admin@collegecentral.edu.ht', students: 320, teachers: 18, status: 'active', type: 'Collège' },
-      { id: 4, name: 'École Marie-Jeanne', code: 'EMJ', address: 'Carrefour, Haïti', phone: '+509 2222-4444', email: 'contact@mariejeanne.edu.ht', students: 280, teachers: 15, status: 'pending', type: 'Primaire' },
-      { id: 5, name: 'Institut Technique', code: 'IT', address: 'Cap-Haïtien, Haïti', phone: '+509 2222-5555', email: 'info@insttech.edu.ht', students: 520, teachers: 35, status: 'active', type: 'Technique' },
-    ];
-    
-    setTimeout(() => {
-      setSchools(sampleSchools);
-      setLoading(false);
-    }, 500);
+    fetchSchools();
   }, []);
+
+  const fetchSchools = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const response = await schoolAPI.getAll();
+      setSchools(response.data || []);
+    } catch (err) {
+      console.error('Error fetching schools:', err);
+      setError('Erreur lors du chargement des écoles');
+      setSchools([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredSchools = schools.filter(school =>
     school.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    school.code.toLowerCase().includes(searchTerm.toLowerCase())
+    (school.code && school.code.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette école ?')) {
-      setSchools(schools.filter(s => s.id !== id));
+      try {
+        await schoolAPI.delete(id);
+        await fetchSchools(); // Refresh list
+      } catch (err) {
+        console.error('Error deleting school:', err);
+        alert('Erreur lors de la suppression de l\'école');
+      }
+    }
+  };
+
+  const handleSave = async (data) => {
+    try {
+      if (editingSchool) {
+        await schoolAPI.update(editingSchool.id, data);
+      } else {
+        await schoolAPI.create(data);
+      }
+      await fetchSchools(); // Refresh list
+      setShowModal(false);
+      setEditingSchool(null);
+    } catch (err) {
+      console.error('Error saving school:', err);
+      alert('Erreur lors de l\'enregistrement de l\'école');
     }
   };
 
@@ -149,9 +178,8 @@ const SchoolsPage = () => {
                   <Building2 className="w-7 h-7 text-blue-600" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    school.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
-                  }`}>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${school.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                    }`}>
                     {school.status === 'active' ? 'Actif' : 'En attente'}
                   </span>
                   <button className="p-1 hover:bg-gray-100 rounded">
@@ -219,15 +247,7 @@ const SchoolsPage = () => {
         <SchoolModal
           school={editingSchool}
           onClose={() => { setShowModal(false); setEditingSchool(null); }}
-          onSave={(data) => {
-            if (editingSchool) {
-              setSchools(schools.map(s => s.id === editingSchool.id ? { ...s, ...data } : s));
-            } else {
-              setSchools([...schools, { ...data, id: Date.now(), students: 0, teachers: 0 }]);
-            }
-            setShowModal(false);
-            setEditingSchool(null);
-          }}
+          onSave={handleSave}
         />
       )}
     </div>
@@ -251,7 +271,7 @@ const SchoolModal = ({ school, onClose, onSave }) => {
         <h3 className="text-xl font-bold text-gray-800 mb-6">
           {school ? 'Modifier l\'école' : 'Nouvelle école'}
         </h3>
-        
+
         <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">

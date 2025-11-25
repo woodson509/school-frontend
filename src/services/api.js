@@ -172,6 +172,142 @@ export const agentAPI = {
 };
 
 /**
+ * School APIs
+ */
+export const schoolAPI = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/schools${queryString ? `?${queryString}` : ''}`);
+  },
+
+  getById: async (id) => {
+    return fetchWithAuth(`/schools/${id}`);
+  },
+
+  create: async (schoolData) => {
+    return fetchWithAuth('/schools', {
+      method: 'POST',
+      body: JSON.stringify(schoolData),
+    });
+  },
+
+  update: async (id, schoolData) => {
+    return fetchWithAuth(`/schools/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(schoolData),
+    });
+  },
+
+  delete: async (id) => {
+    return fetchWithAuth(`/schools/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+/**
+ * User Management APIs
+ */
+export const userAPI = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/users${queryString ? `?${queryString}` : ''}`);
+  },
+
+  getById: async (id) => {
+    return fetchWithAuth(`/users/${id}`);
+  },
+
+  update: async (id, userData) => {
+    return fetchWithAuth(`/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(userData),
+    });
+  },
+
+  delete: async (id) => {
+    return fetchWithAuth(`/users/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  changePassword: async (id, passwordData) => {
+    return fetchWithAuth(`/users/${id}/password`, {
+      method: 'PATCH',
+      body: JSON.stringify(passwordData),
+    });
+  },
+};
+
+/**
+ * Class APIs
+ */
+export const classAPI = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/classes${queryString ? `?${queryString}` : ''}`);
+  },
+
+  getById: async (id) => {
+    return fetchWithAuth(`/classes/${id}`);
+  },
+
+  create: async (classData) => {
+    return fetchWithAuth('/classes', {
+      method: 'POST',
+      body: JSON.stringify(classData),
+    });
+  },
+
+  update: async (id, classData) => {
+    return fetchWithAuth(`/classes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(classData),
+    });
+  },
+
+  delete: async (id) => {
+    return fetchWithAuth(`/classes/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+/**
+ * Subject APIs
+ */
+export const subjectAPI = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/subjects${queryString ? `?${queryString}` : ''}`);
+  },
+
+  getById: async (id) => {
+    return fetchWithAuth(`/subjects/${id}`);
+  },
+
+  create: async (subjectData) => {
+    return fetchWithAuth('/subjects', {
+      method: 'POST',
+      body: JSON.stringify(subjectData),
+    });
+  },
+
+  update: async (id, subjectData) => {
+    return fetchWithAuth(`/subjects/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(subjectData),
+    });
+  },
+
+  delete: async (id) => {
+    return fetchWithAuth(`/subjects/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+/**
  * Offline Storage Helpers
  */
 export const offlineStorage = {
@@ -260,5 +396,9 @@ export default {
   courseAPI,
   examAPI,
   agentAPI,
+  schoolAPI,
+  userAPI,
+  classAPI,
+  subjectAPI,
   offlineStorage,
 };
