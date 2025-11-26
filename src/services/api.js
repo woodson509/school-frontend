@@ -310,40 +310,6 @@ export const schoolAPI = {
 };
 
 /**
- * User Management APIs
- */
-export const userAPI = {
-  getAll: async (params = {}) => {
-    const queryString = new URLSearchParams(params).toString();
-    return fetchWithAuth(`/users${queryString ? `?${queryString}` : ''}`);
-  },
-
-  getById: async (id) => {
-    return fetchWithAuth(`/users/${id}`);
-  },
-
-  update: async (id, userData) => {
-    return fetchWithAuth(`/users/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(userData),
-    });
-  },
-
-  delete: async (id) => {
-    return fetchWithAuth(`/users/${id}`, {
-      method: 'DELETE',
-    });
-  },
-
-  changePassword: async (id, passwordData) => {
-    return fetchWithAuth(`/users/${id}/password`, {
-      method: 'PATCH',
-      body: JSON.stringify(passwordData),
-    });
-  },
-};
-
-/**
  * Class APIs
  */
 export const classAPI = {
