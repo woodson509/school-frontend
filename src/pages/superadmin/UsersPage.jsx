@@ -23,10 +23,11 @@ import {
   ChevronRight,
   AlertCircle
 } from 'lucide-react';
-import { userAPI } from '../../services/api';
+import { userAPI, schoolAPI } from '../../services/api';
 
 const UsersPage = () => {
   const [users, setUsers] = useState([]);
+  const [schools, setSchools] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -66,9 +67,24 @@ const UsersPage = () => {
     }
   };
 
+  const fetchSchools = async () => {
+    try {
+      const response = await schoolAPI.getAll();
+      if (response.success) {
+        setSchools(response.data);
+      }
+    } catch (err) {
+      console.error('Error fetching schools:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchSchools();
+  }, []);
+
   useEffect(() => {
     fetchUsers();
-  }, [currentPage, roleFilter]); // Re-fetch when page or filter changes
+  }, [currentPage, roleFilter]);
 
   // Debounce search
   useEffect(() => {
@@ -76,7 +92,7 @@ const UsersPage = () => {
       if (currentPage === 1) {
         fetchUsers();
       } else {
-        setCurrentPage(1); // This will trigger the other useEffect
+        setCurrentPage(1);
       }
     }, 500);
     return () => clearTimeout(timer);
@@ -107,7 +123,7 @@ const UsersPage = () => {
     try {
       const response = await userAPI.delete(userId);
       if (response.success) {
-        fetchUsers(); // Refresh list
+        fetchUsers();
         setSelectedUsers(selectedUsers.filter(id => id !== userId));
       } else {
         alert(response.message || 'Erreur lors de la suppression');
@@ -135,7 +151,7 @@ const UsersPage = () => {
       }
     } catch (err) {
       alert('Erreur: ' + err.message);
-      throw err; // Re-throw to keep modal open
+      throw err;
     }
   };
 
@@ -243,6 +259,9 @@ const UsersPage = () => {
                   Rôle
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  École
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Date d'inscription
                 </th>
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
@@ -253,7 +272,7 @@ const UsersPage = () => {
             <tbody className="divide-y divide-gray-200">
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
                     Aucun utilisateur trouvé
                   </td>
                 </tr>
@@ -282,6 +301,9 @@ const UsersPage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">{getRoleBadge(user.role)}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {user.school_name || '-'}
+                    </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {new Date(user.created_at).toLocaleDateString()}
                     </td>
@@ -338,6 +360,7 @@ const UsersPage = () => {
       {showModal && (
         <UserModal
           user={editingUser}
+          schools={schools}
           onClose={() => {
             setShowModal(false);
             setEditingUser(null);
@@ -350,11 +373,12 @@ const UsersPage = () => {
 };
 
 // User Modal Component
-const UserModal = ({ user, onClose, onSave }) => {
+const UserModal = ({ user, schools, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     full_name: user?.full_name || '',
     email: user?.email || '',
     role: user?.role || 'student',
+    school_id: user?.school_id || '',
     password: '',
   });
   const [loading, setLoading] = useState(false);
@@ -363,7 +387,16 @@ const UserModal = ({ user, onClose, onSave }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await onSave(formData);
+      // Don't send password if editing and it's empty
+      const dataToSend = { ...formData };
+      if (user && !dataToSend.password) {
+        delete dataToSend.password;
+      }
+      // Convert empty string to null for school_id
+      if (dataToSend.school_id === '') {
+        dataToSend.school_id = null;
+      }
+      await onSave(dataToSend);
     } catch (error) {
       // Error handled in parent
     } finally {
@@ -418,6 +451,24 @@ const UserModal = ({ user, onClose, onSave }) => {
               <option value="teacher">Professeur</option>
               <option value="admin">Administrateur</option>
               <option value="agent">Agent</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              École
+            </label>
+            <select
+              value={formData.school_id}
+              onChange={(e) => setFormData({ ...formData, school_id: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">-- Aucune école --</option>
+              {schools.map((school) => (
+                <option key={school.id} value={school.id}>
+                  {school.name}
+                </option>
+              ))}
             </select>
           </div>
 
