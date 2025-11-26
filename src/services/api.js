@@ -242,6 +242,40 @@ export const dashboardAPI = {
 };
 
 /**
+ * User Management APIs
+ */
+export const userAPI = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/users${queryString ? `?${queryString}` : ''}`);
+  },
+
+  getById: async (id) => {
+    return fetchWithAuth(`/users/${id}`);
+  },
+
+  create: async (userData) => {
+    return fetchWithAuth('/users', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+  },
+
+  update: async (id, userData) => {
+    return fetchWithAuth(`/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(userData),
+    });
+  },
+
+  delete: async (id) => {
+    return fetchWithAuth(`/users/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+/**
  * School APIs
  */
 export const schoolAPI = {
