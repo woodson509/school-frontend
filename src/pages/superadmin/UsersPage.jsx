@@ -1,6 +1,7 @@
 /**
  * Users Management Page
  * CRUD operations for all user types
+ * Connected to backend API
  */
 
 import { useState, useEffect } from 'react';
