@@ -143,6 +143,42 @@ export const examAPI = {
  * Agent/Sales APIs
  */
 export const agentAPI = {
+  // Agent Management
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/agents${queryString ? `?${queryString}` : ''}`);
+  },
+
+  getById: async (id) => {
+    return fetchWithAuth(`/agents/${id}`);
+  },
+
+  create: async (agentData) => {
+    return fetchWithAuth('/agents', {
+      method: 'POST',
+      body: JSON.stringify(agentData),
+    });
+  },
+
+  update: async (id, agentData) => {
+    return fetchWithAuth(`/agents/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(agentData),
+    });
+  },
+
+  delete: async (id) => {
+    return fetchWithAuth(`/agents/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getStats: async (id, params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/agents/${id}/stats${queryString ? `?${queryString}` : ''}`);
+  },
+
+  // Sales Management
   recordSale: async (saleData) => {
     return fetchWithAuth('/agents/sales', {
       method: 'POST',
@@ -168,6 +204,27 @@ export const agentAPI = {
 
   getDashboard: async () => {
     return fetchWithAuth('/agents/dashboard');
+  },
+};
+
+/**
+ * Dashboard APIs
+ */
+export const dashboardAPI = {
+  getSuperAdminDashboard: async () => {
+    return fetchWithAuth('/dashboard/superadmin');
+  },
+
+  getAdminDashboard: async () => {
+    return fetchWithAuth('/dashboard/admin');
+  },
+
+  getTeacherDashboard: async () => {
+    return fetchWithAuth('/dashboard/teacher');
+  },
+
+  getStudentDashboard: async () => {
+    return fetchWithAuth('/dashboard/student');
   },
 };
 
@@ -396,6 +453,7 @@ export default {
   courseAPI,
   examAPI,
   agentAPI,
+  dashboardAPI,
   schoolAPI,
   userAPI,
   classAPI,
