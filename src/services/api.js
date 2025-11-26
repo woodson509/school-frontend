@@ -179,6 +179,19 @@ export const agentAPI = {
   },
 
   // Sales Management
+  getSales: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/agents/sales${queryString ? `?${queryString}` : ''}`);
+  },
+
+  updateSaleStatus: async (id, status) => {
+    return fetchWithAuth(`/agents/sales/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ payment_status: status }),
+    });
+  },
+
+  // Sales Management
   recordSale: async (saleData) => {
     return fetchWithAuth('/agents/sales', {
       method: 'POST',

@@ -15,74 +15,131 @@ import {
   Clock,
   TrendingUp,
   Calendar,
+  AlertCircle
 } from 'lucide-react';
+import { agentAPI } from '../../services/api';
 
 const SalesPage = () => {
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [stats, setStats] = useState({
+    total: 0,
+    paid: 0,
+    pending: 0,
+    commissions: 0
+  });
+
+  const fetchSales = async () => {
+    try {
+      setLoading(true);
+      const response = await agentAPI.getSales();
+      if (response.success) {
+        setSales(response.data);
+        calculateStats(response.data);
+      } else {
+        setError('Failed to fetch sales data');
+      }
+    } catch (err) {
+      console.error('Error fetching sales:', err);
+      setError(err.message || 'An error occurred while fetching sales');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const sampleSales = [
-      { id: 1, agent: 'Sophie Laurent', school: 'École Saint-Jean', student: 'Pierre Jean', amount: 5000, commission: 500, date: '2024-12-01', status: 'paid' },
-      { id: 2, agent: 'Jean-Marc Pierre', school: 'Lycée National', student: 'Marie Claire', amount: 4500, commission: 540, date: '2024-12-02', status: 'paid' },
-      { id: 3, agent: 'Sophie Laurent', school: 'Collège Moderne', student: 'Paul Martin', amount: 5500, commission: 550, date: '2024-12-03', status: 'pending' },
-      { id: 4, agent: 'Marie Dubois', school: 'École Saint-Jean', student: 'Louis Bernard', amount: 5000, commission: 500, date: '2024-12-04', status: 'pending' },
-      { id: 5, agent: 'Jean-Marc Pierre', school: 'Lycée National', student: 'Emma Petit', amount: 4500, commission: 540, date: '2024-12-05', status: 'cancelled' },
-      { id: 6, agent: 'Sophie Laurent', school: 'Collège Moderne', student: 'Lucas Robert', amount: 5500, commission: 550, date: '2024-12-06', status: 'paid' },
-    ];
-    
-    setTimeout(() => {
-      setSales(sampleSales);
-      setLoading(false);
-    }, 500);
+    fetchSales();
   }, []);
 
+  const calculateStats = (salesData) => {
+    const newStats = {
+      total: salesData.reduce((acc, s) => acc + parseFloat(s.amount || 0), 0),
+      paid: salesData
+        .filter(s => s.payment_status === 'completed')
+        .reduce((acc, s) => acc + parseFloat(s.amount || 0), 0),
+      pending: salesData
+        .filter(s => s.payment_status === 'pending')
+        .reduce((acc, s) => acc + parseFloat(s.amount || 0), 0),
+      commissions: salesData
+        .filter(s => s.payment_status === 'completed')
+        .reduce((acc, s) => acc + parseFloat(s.commission || 0), 0),
+    };
+    setStats(newStats);
+  };
+
+  const handleStatusUpdate = async (id, newStatus) => {
+    if (!confirm(`Êtes-vous sûr de vouloir changer le statut à "${newStatus}" ?`)) return;
+
+    try {
+      const response = await agentAPI.updateSaleStatus(id, newStatus);
+      if (response.success) {
+        // Refresh data
+        fetchSales();
+      } else {
+        alert('Erreur lors de la mise à jour du statut');
+      }
+    } catch (err) {
+      console.error('Error updating status:', err);
+      alert('Erreur: ' + err.message);
+    }
+  };
+
   const filteredSales = sales.filter(sale => {
-    const matchesSearch = sale.agent.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         sale.school.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         sale.student.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || sale.status === statusFilter;
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch =
+      (sale.agent_name?.toLowerCase() || '').includes(searchLower) ||
+      (sale.school_name?.toLowerCase() || '').includes(searchLower) ||
+      (sale.agent_code?.toLowerCase() || '').includes(searchLower);
+
+    const matchesStatus = statusFilter === 'all' || sale.payment_status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const getStatusBadge = (status) => {
     const styles = {
-      paid: 'bg-green-100 text-green-700',
+      completed: 'bg-green-100 text-green-700',
       pending: 'bg-orange-100 text-orange-700',
-      cancelled: 'bg-red-100 text-red-700',
+      failed: 'bg-red-100 text-red-700',
     };
     const icons = {
-      paid: CheckCircle,
+      completed: CheckCircle,
       pending: Clock,
-      cancelled: XCircle,
+      failed: XCircle,
     };
     const labels = {
-      paid: 'Payé',
+      completed: 'Payé',
       pending: 'En attente',
-      cancelled: 'Annulé',
+      failed: 'Échoué',
     };
-    const Icon = icons[status];
+
+    // Fallback for unknown status
+    const safeStatus = styles[status] ? status : 'pending';
+    const Icon = icons[safeStatus];
+
     return (
-      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${styles[status]}`}>
+      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${styles[safeStatus]}`}>
         <Icon className="w-3 h-3" />
-        {labels[status]}
+        {labels[safeStatus] || status}
       </span>
     );
-  };
-
-  const stats = {
-    total: sales.reduce((acc, s) => acc + s.amount, 0),
-    paid: sales.filter(s => s.status === 'paid').reduce((acc, s) => acc + s.amount, 0),
-    pending: sales.filter(s => s.status === 'pending').reduce((acc, s) => acc + s.amount, 0),
-    commissions: sales.filter(s => s.status === 'paid').reduce((acc, s) => acc + s.commission, 0),
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 p-4 rounded-lg flex items-center gap-3 text-red-700">
+        <AlertCircle className="w-5 h-5" />
+        <p>{error}</p>
       </div>
     );
   }
@@ -96,7 +153,7 @@ const SalesPage = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Rechercher..."
+              placeholder="Rechercher agent, école..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 w-64"
@@ -108,9 +165,9 @@ const SalesPage = () => {
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Tous les statuts</option>
-            <option value="paid">Payé</option>
+            <option value="completed">Payé</option>
             <option value="pending">En attente</option>
-            <option value="cancelled">Annulé</option>
+            <option value="failed">Échoué</option>
           </select>
         </div>
         <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
@@ -169,57 +226,85 @@ const SalesPage = () => {
 
       {/* Sales Table */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">ID</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Agent</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">École</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Étudiant</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Montant</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Commission</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Statut</th>
-              <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {filteredSales.map((sale) => (
-              <tr key={sale.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 text-sm text-gray-600">#{sale.id.toString().padStart(4, '0')}</td>
-                <td className="px-6 py-4 text-sm font-medium text-gray-800">{sale.agent}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{sale.school}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{sale.student}</td>
-                <td className="px-6 py-4 text-sm font-medium text-gray-800">${sale.amount.toLocaleString()}</td>
-                <td className="px-6 py-4 text-sm text-green-600">${sale.commission}</td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Calendar className="w-4 h-4" />
-                    {sale.date}
-                  </div>
-                </td>
-                <td className="px-6 py-4">{getStatusBadge(sale.status)}</td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <button className="p-2 hover:bg-gray-100 rounded-lg">
-                      <Eye className="w-4 h-4 text-gray-600" />
-                    </button>
-                    {sale.status === 'pending' && (
-                      <>
-                        <button className="p-2 hover:bg-green-50 rounded-lg" title="Marquer payé">
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                        </button>
-                        <button className="p-2 hover:bg-red-50 rounded-lg" title="Annuler">
-                          <XCircle className="w-4 h-4 text-red-600" />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Agent</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">École</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Montant</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Commission</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Statut</th>
+                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {filteredSales.length === 0 ? (
+                <tr>
+                  <td colspan="8" className="px-6 py-8 text-center text-gray-500">
+                    Aucune vente trouvée
+                  </td>
+                </tr>
+              ) : (
+                filteredSales.map((sale) => (
+                  <tr key={sale.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Calendar className="w-4 h-4" />
+                        {new Date(sale.sale_date).toLocaleDateString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">{sale.agent_name}</p>
+                        <p className="text-xs text-gray-500">{sale.agent_code}</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{sale.school_name}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      <span className="capitalize">{sale.subscription_type}</span>
+                      <span className="text-xs text-gray-400 ml-1">({sale.subscription_months} mois)</span>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium text-gray-800">
+                      ${parseFloat(sale.amount).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-green-600 font-medium">
+                      ${parseFloat(sale.commission).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4">{getStatusBadge(sale.payment_status)}</td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {sale.payment_status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => handleStatusUpdate(sale.id, 'completed')}
+                              className="p-2 hover:bg-green-50 rounded-lg text-green-600 transition-colors"
+                              title="Marquer comme payé"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleStatusUpdate(sale.id, 'failed')}
+                              className="p-2 hover:bg-red-50 rounded-lg text-red-600 transition-colors"
+                              title="Marquer comme échoué"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                        {sale.payment_status !== 'pending' && (
+                          <span className="text-xs text-gray-400 italic">Aucune action</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
