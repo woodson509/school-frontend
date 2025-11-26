@@ -386,29 +386,19 @@ const AgentModal = ({ agent, onClose, onSave }) => {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Commission (%) *</label>
-              <input
-                type="number"
-                value={formData.commission_rate}
-                onChange={(e) => setFormData({ ...formData, commission_rate: parseFloat(e.target.value) })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                min="0"
-                max="100"
-                step="0.1"
-                required
-              />
-            </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Commission (%) *</label>
+            <input
+              type="number"
+              value={formData.commission_rate}
+              onChange={(e) => setFormData({ ...formData, commission_rate: parseFloat(e.target.value) })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              min="0"
+              max="100"
+              step="0.1"
+              required
+            />
           </div>
 
           {agent && (
@@ -434,8 +424,8 @@ const AgentModal = ({ agent, onClose, onSave }) => {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 
