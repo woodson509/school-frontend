@@ -253,7 +253,6 @@ const AgentsPage = () => {
                     <div>
                       <p className="font-medium text-gray-800">{agent.full_name}</p>
                       <p className="text-sm text-gray-500">{agent.email}</p>
-                      <p className="text-xs text-gray-400">{agent.phone}</p>
                     </div>
                   </div>
                 </td>
