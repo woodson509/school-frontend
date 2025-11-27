@@ -422,6 +422,56 @@ export const logAPI = {
 };
 
 /**
+ * Backup APIs
+ */
+export const backupAPI = {
+  create: async () => {
+    return fetchWithAuth('/backups', {
+      method: 'POST'
+    });
+  },
+
+  getAll: async () => {
+    return fetchWithAuth('/backups');
+  },
+
+  getStats: async () => {
+    return fetchWithAuth('/backups/stats');
+  },
+
+  download: async (filename) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/backups/${filename}/download`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Download failed');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    return { success: true };
+  },
+
+  delete: async (filename) => {
+    return fetchWithAuth(`/backups/${filename}`, {
+      method: 'DELETE'
+    });
+  }
+};
+
+/**
  * Class APIs
  */
 export const classAPI = {

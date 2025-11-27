@@ -1,66 +1,130 @@
 /**
  * Backup Management Page
  * Manage system backups and restore
+ * Connected to backend API
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Database,
   Download,
   Upload,
-  Clock,
   CheckCircle,
-  AlertCircle,
   HardDrive,
   Cloud,
   RefreshCw,
   Trash2,
-  Calendar,
   Settings,
+  Loader,
+  AlertCircle,
 } from 'lucide-react';
+import { backupAPI } from '../../services/api';
 
 const BackupPage = () => {
+  const [backups, setBackups] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [backupInProgress, setBackupInProgress] = useState(false);
-  const [backupProgress, setBackupProgress] = useState(0);
+  const [error, setError] = useState(null);
 
-  const backups = [
-    { id: 1, name: 'backup_2024-12-15_23-00.sql', date: '2024-12-15 23:00', size: '245 MB', type: 'auto', status: 'completed', storage: 'local' },
-    { id: 2, name: 'backup_2024-12-14_23-00.sql', date: '2024-12-14 23:00', size: '243 MB', type: 'auto', status: 'completed', storage: 'cloud' },
-    { id: 3, name: 'backup_2024-12-13_23-00.sql', date: '2024-12-13 23:00', size: '241 MB', type: 'auto', status: 'completed', storage: 'local' },
-    { id: 4, name: 'backup_manual_2024-12-12.sql', date: '2024-12-12 14:30', size: '240 MB', type: 'manual', status: 'completed', storage: 'cloud' },
-    { id: 5, name: 'backup_2024-12-11_23-00.sql', date: '2024-12-11 23:00', size: '238 MB', type: 'auto', status: 'completed', storage: 'local' },
-  ];
+  useEffect(() => {
+    fetchBackups();
+    fetchStats();
+  }, []);
 
-  const storageStats = {
-    local: { used: 1.2, total: 10, unit: 'GB' },
-    cloud: { used: 3.5, total: 50, unit: 'GB' },
-  };
-
-  const handleBackup = () => {
-    setBackupInProgress(true);
-    setBackupProgress(0);
-    const interval = setInterval(() => {
-      setBackupProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setBackupInProgress(false);
-          return 100;
-        }
-        return prev + 5;
-      });
-    }, 200);
-  };
-
-  const handleDelete = (id) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cette sauvegarde ?')) {
-      // Delete backup
+  const fetchBackups = async () => {
+    try {
+      setLoading(true);
+      const response = await backupAPI.getAll();
+      if (response.success) {
+        setBackups(response.data);
+      }
+    } catch (err) {
+      console.error('Error fetching backups:', err);
+      setError('Erreur lors du chargement des sauvegardes');
+    } finally {
+      setLoading(false);
     }
   };
+
+  const fetchStats = async () => {
+    try {
+      const response = await backupAPI.getStats();
+      if (response.success) {
+        setStats(response.data);
+      }
+    } catch (err) {
+      console.error('Error fetching stats:', err);
+    }
+  };
+
+  const handleBackup = async () => {
+    try {
+      setBackupInProgress(true);
+      setError(null);
+      const response = await backupAPI.create();
+
+      if (response.success) {
+        alert('✅ Sauvegarde créée avec succès !');
+        fetchBackups();
+        fetchStats();
+      } else {
+        throw new Error(response.message);
+      }
+    } catch (err) {
+      console.error('Backup error:', err);
+      alert('❌ Erreur lors de la sauvegarde : ' + err.message);
+    } finally {
+      setBackupInProgress(false);
+    }
+  };
+
+  const handleDownload = async (filename) => {
+    try {
+      await backupAPI.download(filename);
+    } catch (err) {
+      console.error('Download error:', err);
+      alert('Erreur lors du téléchargement');
+    }
+  };
+
+  const handleDelete = async (filename) => {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer ${filename} ?`)) return;
+
+    try {
+      const response = await backupAPI.delete(filename);
+      if (response.success) {
+        fetchBackups();
+        fetchStats();
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+      alert('Erreur lors de la suppression');
+    }
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString('fr-FR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (loading && backups.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader className="w-12 h-12 animate-spin text-blue-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -79,7 +143,7 @@ const BackupPage = () => {
             {backupInProgress ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin" />
-                En cours... {backupProgress}%
+                En cours...
               </>
             ) : (
               <>
@@ -92,33 +156,20 @@ const BackupPage = () => {
 
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
-              <Upload className="w-6 h-6 text-green-600" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-800">Restaurer</h3>
-              <p className="text-sm text-gray-500">Restaurer depuis une sauvegarde</p>
-            </div>
-          </div>
-          <button className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-            <Upload className="w-4 h-4" />
-            Sélectionner un fichier
-          </button>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center gap-4 mb-4">
             <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center">
               <Settings className="w-6 h-6 text-purple-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-800">Planification</h3>
-              <p className="text-sm text-gray-500">Configurer les sauvegardes auto</p>
+              <h3 className="font-semibold text-gray-800">Information</h3>
+              <p className="text-sm text-gray-500">Les sauvegardes sont stockées localement</p>
             </div>
           </div>
-          <button className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-            <Calendar className="w-4 h-4" />
-            Configurer
+          <button
+            onClick={fetchBackups}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Actualiser
           </button>
         </div>
       </div>
@@ -126,27 +177,25 @@ const BackupPage = () => {
       {/* Backup Progress */}
       {backupInProgress && (
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <RefreshCw className="w-5 h-5 text-blue-600 animate-spin" />
-              <span className="font-medium text-blue-800">Sauvegarde en cours...</span>
-            </div>
-            <span className="text-blue-600">{backupProgress}%</span>
-          </div>
-          <div className="h-2 bg-blue-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-blue-600 rounded-full transition-all"
-              style={{ width: `${backupProgress}%` }}
-            />
+          <div className="flex items-center gap-2">
+            <RefreshCw className="w-5 h-5 text-blue-600 animate-spin" />
+            <span className="font-medium text-blue-800">Sauvegarde en cours...</span>
           </div>
           <p className="text-sm text-blue-600 mt-2">
-            Veuillez ne pas fermer cette page pendant la sauvegarde.
+            Veuillez patienter, cela peut prendre quelques minutes.
           </p>
         </div>
       )}
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600" />
+          <p className="text-red-700">{error}</p>
+        </div>
+      )}
+
       {/* Storage Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {stats && (
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex items-center gap-3 mb-4">
             <HardDrive className="w-5 h-5 text-gray-600" />
@@ -154,160 +203,116 @@ const BackupPage = () => {
           </div>
           <div className="mb-2">
             <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-600">{storageStats.local.used} {storageStats.local.unit} utilisés</span>
-              <span className="text-gray-500">{storageStats.local.total} {storageStats.local.unit}</span>
+              <span className="text-gray-600">{stats.used} {stats.unit} utilisés</span>
+              <span className="text-gray-500">{stats.total} {stats.unit}</span>
             </div>
             <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
               <div
                 className="h-full bg-blue-600 rounded-full"
-                style={{ width: `${(storageStats.local.used / storageStats.local.total) * 100}%` }}
+                style={{ width: `${(stats.used / stats.total) * 100}%` }}
               />
             </div>
           </div>
           <p className="text-sm text-gray-500">
-            {storageStats.local.total - storageStats.local.used} {storageStats.local.unit} disponibles
+            {(stats.total - stats.used).toFixed(2)} {stats.unit} disponibles · {stats.total_backups} sauvegarde(s)
           </p>
         </div>
-
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Cloud className="w-5 h-5 text-gray-600" />
-            <h3 className="font-semibold text-gray-800">Stockage cloud</h3>
-          </div>
-          <div className="mb-2">
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-600">{storageStats.cloud.used} {storageStats.cloud.unit} utilisés</span>
-              <span className="text-gray-500">{storageStats.cloud.total} {storageStats.cloud.unit}</span>
-            </div>
-            <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-green-600 rounded-full"
-                style={{ width: `${(storageStats.cloud.used / storageStats.cloud.total) * 100}%` }}
-              />
-            </div>
-          </div>
-          <p className="text-sm text-gray-500">
-            {storageStats.cloud.total - storageStats.cloud.used} {storageStats.cloud.unit} disponibles
-          </p>
-        </div>
-      </div>
-
-      {/* Backup Settings */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h3 className="font-semibold text-gray-800 mb-4">Configuration des sauvegardes automatiques</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Fréquence</label>
-            <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-              <option value="daily">Quotidienne</option>
-              <option value="weekly">Hebdomadaire</option>
-              <option value="monthly">Mensuelle</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Heure d'exécution</label>
-            <input
-              type="time"
-              defaultValue="23:00"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Rétention (jours)</label>
-            <input
-              type="number"
-              defaultValue="30"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-        <div className="flex items-center gap-4 mt-4 pt-4 border-t border-gray-200">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" defaultChecked className="rounded border-gray-300" />
-            <span className="text-sm text-gray-700">Sauvegarde sur le cloud</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" defaultChecked className="rounded border-gray-300" />
-            <span className="text-sm text-gray-700">Notification par email</span>
-          </label>
-        </div>
-      </div>
+      )}
 
       {/* Backups List */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
           <h3 className="font-semibold text-gray-800">Historique des sauvegardes</h3>
-          <span className="text-sm text-gray-500">{backups.length} sauvegardes</span>
+          <span className="text-sm text-gray-500">{backups.length} sauvegarde(s)</span>
         </div>
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Nom</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Taille</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Stockage</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Statut</th>
-              <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {backups.map((backup) => (
-              <tr key={backup.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <Database className="w-5 h-5 text-gray-400" />
-                    <span className="font-medium text-gray-800">{backup.name}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-600">{backup.date}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{backup.size}</td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    backup.type === 'auto' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
-                  }`}>
-                    {backup.type === 'auto' ? 'Automatique' : 'Manuelle'}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    {backup.storage === 'cloud' ? (
-                      <Cloud className="w-4 h-4 text-green-600" />
-                    ) : (
-                      <HardDrive className="w-4 h-4 text-blue-600" />
-                    )}
-                    <span className="text-sm text-gray-600">
-                      {backup.storage === 'cloud' ? 'Cloud' : 'Local'}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span className="text-sm text-green-600">Complète</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center justify-end gap-2">
-                    <button className="p-2 hover:bg-gray-100 rounded-lg" title="Télécharger">
-                      <Download className="w-4 h-4 text-blue-600" />
-                    </button>
-                    <button className="p-2 hover:bg-gray-100 rounded-lg" title="Restaurer">
-                      <Upload className="w-4 h-4 text-green-600" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(backup.id)}
-                      className="p-2 hover:bg-gray-100 rounded-lg"
-                      title="Supprimer"
-                    >
-                      <Trash2 className="w-4 h-4 text-red-600" />
-                    </button>
-                  </div>
-                </td>
+
+        {backups.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <Database className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+            <p>Aucune sauvegarde disponible</p>
+            <p className="text-sm mt-1">Créez votre première sauvegarde</p>
+          </div>
+        ) : (
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Nom</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Taille</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Stockage</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Statut</th>
+                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {backups.map((backup) => (
+                <tr key={backup.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <Database className="w-5 h-5 text-gray-400" />
+                      <span className="font-medium text-gray-800">{backup.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{formatDate(backup.date)}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{backup.size}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${backup.type === 'auto' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                      }`}>
+                      {backup.type === 'auto' ? 'Automatique' : 'Manuelle'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      {backup.storage === 'cloud' ? (
+                        <Cloud className="w-4 h-4 text-green-600" />
+                      ) : (
+                        <HardDrive className="w-4 h-4 text-blue-600" />
+                      )}
+                      <span className="text-sm text-gray-600">
+                        {backup.storage === 'cloud' ? 'Cloud' : 'Local'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-green-600">Complète</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => handleDownload(backup.filename)}
+                        className="p-2 hover:bg-gray-100 rounded-lg"
+                        title="Télécharger"
+                      >
+                        <Download className="w-4 h-4 text-blue-600" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(backup.filename)}
+                        className="p-2 hover:bg-gray-100 rounded-lg"
+                        title="Supprimer"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Help Section */}
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <h4 className="font-semibold text-blue-800 mb-2">ℹ️ Comment restaurer une sauvegarde ?</h4>
+        <ol className="text-sm text-blue-700 space-y-1 ml-4 list-decimal">
+          <li>Téléchargez le fichier .sql désiré</li>
+          <li>Utilisez un outil comme pgAdmin ou psql</li>
+          <li>Exécutez : <code className="bg-blue-100 px-1 rounded">psql -U postgres -d school_management -f backup_file.sql</code></li>
+        </ol>
       </div>
     </div>
   );
