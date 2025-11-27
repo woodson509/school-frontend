@@ -472,6 +472,27 @@ export const backupAPI = {
 };
 
 /**
+ * Dashboard APIs
+ */
+export const dashboardAPI = {
+  getSuperAdmin: async () => {
+    return fetchWithAuth('/dashboard/superadmin');
+  },
+
+  getAdmin: async () => {
+    return fetchWithAuth('/dashboard/admin');
+  },
+
+  getTeacher: async () => {
+    return fetchWithAuth('/dashboard/teacher');
+  },
+
+  getStudent: async () => {
+    return fetchWithAuth('/dashboard/student');
+  }
+};
+
+/**
  * Class APIs
  */
 export const classAPI = {
