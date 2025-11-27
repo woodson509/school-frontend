@@ -141,6 +141,32 @@ const RolesPage = () => {
     return acc;
   }, {});
 
+  const handleFixDatabase = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://edika-api.onrender.com/api/migrations/roles', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        alert('✅ Base de données réparée avec succès !');
+        window.location.reload();
+      } else {
+        alert('❌ Erreur : ' + (data.message || 'Échec de la migration'));
+      }
+    } catch (err) {
+      alert('❌ Erreur réseau : ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const hasPermission = (role, permissionCode) => {
     if (!role.permissions) return false;
     return role.permissions.some(p => p.code === permissionCode);
@@ -172,9 +198,17 @@ const RolesPage = () => {
       </div>
 
       {error && (
-        <div className="bg-red-50 p-4 rounded-lg flex items-center gap-3 text-red-700">
-          <AlertCircle className="w-5 h-5" />
-          <p>{error}</p>
+        <div className="bg-red-50 p-4 rounded-lg flex items-center justify-between gap-3 text-red-700">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5" />
+            <p>{error}</p>
+          </div>
+          <button
+            onClick={handleFixDatabase}
+            className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-800 rounded-lg text-sm font-medium transition-colors"
+          >
+            Réparer la base de données
+          </button>
         </div>
       )}
 
