@@ -24,6 +24,7 @@ import ExamPage from './pages/ExamPage';
 
 // Lazy imports for admin pages
 const AdminDashboardPage = lazy(() => import('./pages/admin/DashboardPage'));
+const AdminUsersPage = lazy(() => import('./pages/admin/UsersPage'));
 const AdminCoursesPage = lazy(() => import('./pages/admin/CoursesPage'));
 const AdminSubjectsPage = lazy(() => import('./pages/admin/SubjectsPage'));
 const AdminCurriculaPage = lazy(() => import('./pages/admin/CurriculaPage'));
@@ -215,6 +216,7 @@ const AppRoutes = () => {
               <Route path="dashboard" element={<AdminDashboardPage />} />
 
               {/* Academic Routes */}
+              <Route path="users" element={<AdminUsersPage />} />
               <Route path="courses" element={<AdminCoursesPage />} />
               <Route path="subjects" element={<AdminSubjectsPage />} />
               <Route path="curricula" element={<AdminCurriculaPage />} />

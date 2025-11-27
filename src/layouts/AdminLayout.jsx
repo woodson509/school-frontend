@@ -76,6 +76,7 @@ const AdminLayout = () => {
       label: 'Pédagogie',
       icon: GraduationCap,
       submenu: [
+        { label: 'Utilisateurs', icon: Users, path: '/users' },
         { label: 'Cours', icon: BookOpen, path: '/courses' },
         { label: 'Matières', icon: BookMarked, path: '/subjects' },
         { label: 'Programmes', icon: Layers, path: '/curricula' },
@@ -295,6 +296,7 @@ const AdminLayout = () => {
 const getPageTitle = (pathname) => {
   const titles = {
     '/dashboard': 'Tableau de bord',
+    '/users': 'Gestion des utilisateurs',
     '/courses': 'Gestion des cours',
     '/subjects': 'Gestion des matières',
     '/curricula': 'Programmes scolaires',
