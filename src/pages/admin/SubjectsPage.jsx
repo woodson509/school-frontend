@@ -15,6 +15,7 @@ import {
   Clock,
   Users,
 } from 'lucide-react';
+import { subjectAPI } from '../../services/api';
 
 const SubjectsPage = () => {
   const [subjects, setSubjects] = useState([]);
@@ -24,31 +25,44 @@ const SubjectsPage = () => {
   const [editingSubject, setEditingSubject] = useState(null);
 
   useEffect(() => {
-    const sampleSubjects = [
-      { id: 1, name: 'Mathématiques', code: 'MATH', description: 'Algèbre, géométrie, analyse', courses: 12, teachers: 5, color: '#3B82F6' },
-      { id: 2, name: 'Physique', code: 'PHY', description: 'Mécanique, optique, électricité', courses: 8, teachers: 3, color: '#8B5CF6' },
-      { id: 3, name: 'Chimie', code: 'CHEM', description: 'Chimie organique et inorganique', courses: 6, teachers: 2, color: '#10B981' },
-      { id: 4, name: 'Informatique', code: 'CS', description: 'Programmation, algorithmique', courses: 15, teachers: 6, color: '#F59E0B' },
-      { id: 5, name: 'Français', code: 'FR', description: 'Littérature et grammaire', courses: 10, teachers: 4, color: '#EF4444' },
-      { id: 6, name: 'Anglais', code: 'EN', description: 'Langue anglaise', courses: 8, teachers: 3, color: '#6366F1' },
-      { id: 7, name: 'Histoire', code: 'HIST', description: 'Histoire mondiale et locale', courses: 5, teachers: 2, color: '#EC4899' },
-      { id: 8, name: 'Biologie', code: 'BIO', description: 'Sciences de la vie', courses: 7, teachers: 3, color: '#14B8A6' },
-    ];
-    
-    setTimeout(() => {
-      setSubjects(sampleSubjects);
-      setLoading(false);
-    }, 500);
+    fetchSubjects();
   }, []);
+
+  const fetchSubjects = async () => {
+    try {
+      setLoading(true);
+      const response = await subjectAPI.getAll();
+      if (response.success) {
+        // Map API data to frontend format
+        const mappedSubjects = response.data.map(subject => ({
+          ...subject,
+          courses: 0, // TODO: Fetch real count
+          teachers: 0, // TODO: Fetch real count
+          color: subject.color || '#3B82F6' // Default color if not in DB
+        }));
+        setSubjects(mappedSubjects);
+      }
+    } catch (error) {
+      console.error('Error fetching subjects:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredSubjects = subjects.filter(subject =>
     subject.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     subject.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette matière ?')) {
-      setSubjects(subjects.filter(s => s.id !== id));
+      try {
+        await subjectAPI.delete(id);
+        setSubjects(subjects.filter(s => s.id !== id));
+      } catch (error) {
+        console.error('Error deleting subject:', error);
+        alert('Erreur lors de la suppression de la matière');
+      }
     }
   };
 
@@ -103,7 +117,7 @@ const SubjectsPage = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-800">
-                {subjects.reduce((acc, s) => acc + s.courses, 0)}
+                {subjects.reduce((acc, s) => acc + (s.courses || 0), 0)}
               </p>
               <p className="text-sm text-gray-500">Cours total</p>
             </div>
@@ -116,7 +130,7 @@ const SubjectsPage = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-800">
-                {subjects.reduce((acc, s) => acc + s.teachers, 0)}
+                {subjects.reduce((acc, s) => acc + (s.teachers || 0), 0)}
               </p>
               <p className="text-sm text-gray-500">Professeurs</p>
             </div>
@@ -128,7 +142,7 @@ const SubjectsPage = () => {
               <Clock className="w-6 h-6 text-orange-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-800">156</p>
+              <p className="text-2xl font-bold text-gray-800">0</p>
               <p className="text-sm text-gray-500">Heures/semaine</p>
             </div>
           </div>
@@ -172,14 +186,14 @@ const SubjectsPage = () => {
                   </button>
                 </div>
               </div>
-              
+
               <h3 className="font-semibold text-gray-800 mb-1">{subject.name}</h3>
               <p className="text-sm text-gray-500 mb-4">{subject.code}</p>
               <p className="text-sm text-gray-600 mb-4 line-clamp-2">{subject.description}</p>
-              
+
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">{subject.courses} cours</span>
-                <span className="text-gray-500">{subject.teachers} profs</span>
+                <span className="text-gray-500">{subject.courses || 0} cours</span>
+                <span className="text-gray-500">{subject.teachers || 0} profs</span>
               </div>
             </div>
           </div>
@@ -194,14 +208,20 @@ const SubjectsPage = () => {
             setShowModal(false);
             setEditingSubject(null);
           }}
-          onSave={(data) => {
-            if (editingSubject) {
-              setSubjects(subjects.map(s => s.id === editingSubject.id ? { ...s, ...data } : s));
-            } else {
-              setSubjects([...subjects, { ...data, id: Date.now(), courses: 0, teachers: 0 }]);
+          onSave={async (data) => {
+            try {
+              if (editingSubject) {
+                await subjectAPI.update(editingSubject.id, data);
+              } else {
+                await subjectAPI.create(data);
+              }
+              fetchSubjects();
+              setShowModal(false);
+              setEditingSubject(null);
+            } catch (error) {
+              console.error('Error saving subject:', error);
+              alert('Erreur lors de l\'enregistrement de la matière');
             }
-            setShowModal(false);
-            setEditingSubject(null);
           }}
         />
       )}
@@ -223,7 +243,7 @@ const SubjectModal = ({ subject, onClose, onSave }) => {
         <h3 className="text-xl font-bold text-gray-800 mb-6">
           {subject ? 'Modifier la matière' : 'Nouvelle matière'}
         </h3>
-        
+
         <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Nom</label>

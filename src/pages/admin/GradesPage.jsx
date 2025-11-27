@@ -20,6 +20,7 @@ import {
   Check,
   X,
 } from 'lucide-react';
+import { gradeAPI } from '../../services/api';
 
 const GradesPage = () => {
   const [grades, setGrades] = useState([]);
@@ -30,25 +31,25 @@ const GradesPage = () => {
   const [editingGrade, setEditingGrade] = useState(null);
 
   useEffect(() => {
-    const sampleGrades = [
-      { id: 1, student: 'Jean Pierre', class: '6ème A', subject: 'Mathématiques', exam: 'Examen Final', score: 85, maxScore: 100, date: '2024-12-15', status: 'published' },
-      { id: 2, student: 'Marie Claire', class: '6ème A', subject: 'Mathématiques', exam: 'Examen Final', score: 78, maxScore: 100, date: '2024-12-15', status: 'published' },
-      { id: 3, student: 'Paul Martin', class: '6ème A', subject: 'Physique', exam: 'Midterm', score: 72, maxScore: 80, date: '2024-12-10', status: 'published' },
-      { id: 4, student: 'Sophie Durand', class: '6ème B', subject: 'Français', exam: 'Dissertation', score: 88, maxScore: 100, date: '2024-12-12', status: 'published' },
-      { id: 5, student: 'Louis Bernard', class: '5ème A', subject: 'Anglais', exam: 'Oral', score: 45, maxScore: 50, date: '2024-12-08', status: 'pending' },
-      { id: 6, student: 'Emma Petit', class: '5ème A', subject: 'Histoire', exam: 'QCM', score: null, maxScore: 40, date: '2024-12-14', status: 'pending' },
-      { id: 7, student: 'Lucas Robert', class: '6ème A', subject: 'Informatique', exam: 'Quiz 3', score: 18, maxScore: 20, date: '2024-12-13', status: 'published' },
-      { id: 8, student: 'Chloé Moreau', class: '6ème B', subject: 'Biologie', exam: 'TP Final', score: 82, maxScore: 100, date: '2024-12-11', status: 'published' },
-    ];
-    
-    setTimeout(() => {
-      setGrades(sampleGrades);
-      setLoading(false);
-    }, 500);
+    fetchGrades();
   }, []);
 
-  const classes = ['all', '6ème A', '6ème B', '5ème A', '5ème B', '4ème A'];
-  const subjects = ['all', 'Mathématiques', 'Physique', 'Français', 'Anglais', 'Histoire', 'Informatique', 'Biologie'];
+  const fetchGrades = async () => {
+    try {
+      setLoading(true);
+      const response = await gradeAPI.getAll();
+      if (response.success) {
+        setGrades(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching grades:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const classes = ['all', '6ème A', '6ème B', '5ème A', '5ème B', '4ème A']; // TODO: Fetch from API
+  const subjects = ['all', 'Mathématiques', 'Physique', 'Français', 'Anglais', 'Histoire', 'Informatique', 'Biologie']; // TODO: Fetch from API
 
   const filteredGrades = grades.filter(grade => {
     const matchesSearch = grade.student.toLowerCase().includes(searchTerm.toLowerCase());
@@ -69,9 +70,17 @@ const GradesPage = () => {
     return 'text-red-600 bg-red-100';
   };
 
-  const handleSaveGrade = (id, newScore) => {
-    setGrades(grades.map(g => g.id === id ? { ...g, score: parseInt(newScore), status: 'published' } : g));
-    setEditingGrade(null);
+  const handleSaveGrade = async (id, newScore) => {
+    try {
+      const response = await gradeAPI.update(id, { score: parseInt(newScore) });
+      if (response.success) {
+        setGrades(grades.map(g => g.id === id ? { ...g, score: parseInt(newScore), status: 'published' } : g));
+        setEditingGrade(null);
+      }
+    } catch (error) {
+      console.error('Error updating grade:', error);
+      alert('Erreur lors de la mise à jour de la note');
+    }
   };
 
   if (loading) {
@@ -245,9 +254,8 @@ const GradesPage = () => {
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-600">{grade.date}</td>
                 <td className="px-6 py-4">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    grade.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
-                  }`}>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${grade.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                    }`}>
                     {grade.status === 'published' ? 'Publié' : 'En attente'}
                   </span>
                 </td>

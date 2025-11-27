@@ -20,6 +20,7 @@ import {
   Copy,
   Play,
 } from 'lucide-react';
+import { examAPI } from '../../services/api';
 
 const ExamsPage = () => {
   const [exams, setExams] = useState([]);
@@ -27,29 +28,56 @@ const ExamsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
+  const [editingExam, setEditingExam] = useState(null);
 
   useEffect(() => {
-    const sampleExams = [
-      { id: 1, title: 'Mathématiques - Examen Final', course: 'MATH-101', date: '2024-12-20', duration: 120, totalMarks: 100, passingMarks: 60, status: 'published', attempts: 45, avgScore: 72 },
-      { id: 2, title: 'Physique - Midterm', course: 'PHY-201', date: '2024-12-18', duration: 90, totalMarks: 80, passingMarks: 48, status: 'published', attempts: 38, avgScore: 65 },
-      { id: 3, title: 'Informatique - Quiz 3', course: 'CS-101', date: '2024-12-16', duration: 30, totalMarks: 20, passingMarks: 12, status: 'draft', attempts: 0, avgScore: 0 },
-      { id: 4, title: 'Français - Dissertation', course: 'FR-101', date: '2024-12-22', duration: 180, totalMarks: 100, passingMarks: 50, status: 'published', attempts: 52, avgScore: 68 },
-      { id: 5, title: 'Anglais - Oral', course: 'EN-101', date: '2024-12-15', duration: 15, totalMarks: 50, passingMarks: 25, status: 'completed', attempts: 40, avgScore: 78 },
-      { id: 6, title: 'Histoire - QCM', course: 'HIST-101', date: '2024-12-19', duration: 45, totalMarks: 40, passingMarks: 24, status: 'published', attempts: 28, avgScore: 70 },
-    ];
-    
-    setTimeout(() => {
-      setExams(sampleExams);
-      setLoading(false);
-    }, 500);
+    fetchExams();
   }, []);
+
+  const fetchExams = async () => {
+    try {
+      setLoading(true);
+      const response = await examAPI.getAll();
+      if (response.success) {
+        // Map API data to frontend format
+        const mappedExams = response.data.map(exam => ({
+          ...exam,
+          course: exam.course_code || exam.course_title,
+          date: exam.exam_date ? new Date(exam.exam_date).toISOString().split('T')[0] : 'Non défini',
+          duration: exam.duration_minutes,
+          totalMarks: exam.total_marks,
+          passingMarks: exam.passing_marks,
+          status: exam.is_published ? 'published' : 'draft',
+          attempts: 0, // TODO: Fetch real count
+          avgScore: 0 // TODO: Fetch real average
+        }));
+        setExams(mappedExams);
+      }
+    } catch (error) {
+      console.error('Error fetching exams:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredExams = exams.filter(exam => {
     const matchesSearch = exam.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         exam.course.toLowerCase().includes(searchTerm.toLowerCase());
+      (exam.course && exam.course.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = statusFilter === 'all' || exam.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const handleDelete = async (id) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet examen ?')) {
+      try {
+        await examAPI.delete(id);
+        setExams(exams.filter(e => e.id !== id));
+      } catch (error) {
+        console.error('Error deleting exam:', error);
+        alert('Erreur lors de la suppression de l\'examen');
+      }
+    }
+  };
 
   const getStatusBadge = (status) => {
     const styles = {
@@ -63,8 +91,8 @@ const ExamsPage = () => {
       completed: 'Terminé',
     };
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status]}`}>
-        {labels[status]}
+      <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status] || styles.draft}`}>
+        {labels[status] || labels.draft}
       </span>
     );
   };
@@ -145,7 +173,7 @@ const ExamsPage = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-800">
-                {exams.reduce((acc, e) => acc + e.attempts, 0)}
+                {exams.reduce((acc, e) => acc + (e.attempts || 0), 0)}
               </p>
               <p className="text-sm text-gray-500">Tentatives</p>
             </div>
@@ -158,7 +186,7 @@ const ExamsPage = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-800">
-                {Math.round(exams.reduce((acc, e) => acc + e.avgScore, 0) / exams.filter(e => e.avgScore > 0).length || 0)}%
+                {Math.round(exams.reduce((acc, e) => acc + (e.avgScore || 0), 0) / (exams.filter(e => e.avgScore > 0).length || 1))}%
               </p>
               <p className="text-sm text-gray-500">Score moyen</p>
             </div>
@@ -211,7 +239,7 @@ const ExamsPage = () => {
                 <td className="px-6 py-4">{getStatusBadge(exam.status)}</td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">{exam.attempts}</span>
+                    <span className="text-sm text-gray-600">{exam.attempts || 0}</span>
                     {exam.avgScore > 0 && (
                       <span className="text-xs text-gray-400">({exam.avgScore}% moy.)</span>
                     )}
@@ -228,10 +256,18 @@ const ExamsPage = () => {
                     <button className="p-2 hover:bg-gray-100 rounded-lg" title="Dupliquer">
                       <Copy className="w-4 h-4 text-gray-600" />
                     </button>
-                    <button className="p-2 hover:bg-gray-100 rounded-lg" title="Modifier">
+                    <button
+                      onClick={() => { setEditingExam(exam); setShowModal(true); }}
+                      className="p-2 hover:bg-gray-100 rounded-lg"
+                      title="Modifier"
+                    >
                       <Edit className="w-4 h-4 text-gray-600" />
                     </button>
-                    <button className="p-2 hover:bg-gray-100 rounded-lg" title="Supprimer">
+                    <button
+                      onClick={() => handleDelete(exam.id)}
+                      className="p-2 hover:bg-gray-100 rounded-lg"
+                      title="Supprimer"
+                    >
                       <Trash2 className="w-4 h-4 text-red-600" />
                     </button>
                   </div>
@@ -240,6 +276,169 @@ const ExamsPage = () => {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Modal */}
+      {showModal && (
+        <ExamModal
+          exam={editingExam}
+          onClose={() => { setShowModal(false); setEditingExam(null); }}
+          onSave={async (data) => {
+            try {
+              if (editingExam) {
+                await examAPI.update(editingExam.id, {
+                  ...data,
+                  duration_minutes: data.duration,
+                  total_marks: data.totalMarks,
+                  passing_marks: data.passingMarks,
+                  exam_date: data.date,
+                  is_published: data.status === 'published'
+                });
+              } else {
+                await examAPI.create({
+                  ...data,
+                  duration_minutes: data.duration,
+                  total_marks: data.totalMarks,
+                  passing_marks: data.passingMarks,
+                  exam_date: data.date,
+                  is_published: data.status === 'published'
+                });
+              }
+              fetchExams();
+              setShowModal(false);
+              setEditingExam(null);
+            } catch (error) {
+              console.error('Error saving exam:', error);
+              alert('Erreur lors de l\'enregistrement de l\'examen');
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+const ExamModal = ({ exam, onClose, onSave }) => {
+  const [formData, setFormData] = useState({
+    title: exam?.title || '',
+    course_id: exam?.course_id || '',
+    date: exam?.date || '',
+    duration: exam?.duration || 60,
+    totalMarks: exam?.totalMarks || 100,
+    passingMarks: exam?.passingMarks || 50,
+    status: exam?.status || 'draft',
+    description: exam?.description || '',
+  });
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
+        <h3 className="text-xl font-bold text-gray-800 mb-6">
+          {exam ? 'Modifier l\'examen' : 'Nouvel examen'}
+        </h3>
+
+        <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Titre</label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">ID du Cours</label>
+            <input
+              type="text"
+              value={formData.course_id}
+              onChange={(e) => setFormData({ ...formData, course_id: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              required
+              placeholder="ID du cours (ex: 1)"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+              <input
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Durée (min)</label>
+              <input
+                type="number"
+                value={formData.duration}
+                onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Note totale</label>
+              <input
+                type="number"
+                value={formData.totalMarks}
+                onChange={(e) => setFormData({ ...formData, totalMarks: parseInt(e.target.value) })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Note de passage</label>
+              <input
+                type="number"
+                value={formData.passingMarks}
+                onChange={(e) => setFormData({ ...formData, passingMarks: parseInt(e.target.value) })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              rows={3}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
+            <select
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="draft">Brouillon</option>
+              <option value="published">Publié</option>
+              <option value="completed">Terminé</option>
+            </select>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+              Annuler
+            </button>
+            <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              {exam ? 'Mettre à jour' : 'Créer'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

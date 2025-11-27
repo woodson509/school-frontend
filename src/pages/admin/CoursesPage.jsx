@@ -18,9 +18,11 @@ import {
   CheckCircle,
   XCircle,
 } from 'lucide-react';
+import { courseAPI, userAPI } from '../../services/api';
 
 const CoursesPage = () => {
   const [courses, setCourses] = useState([]);
+  const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -28,44 +30,93 @@ const CoursesPage = () => {
   const [editingCourse, setEditingCourse] = useState(null);
 
   useEffect(() => {
-    const sampleCourses = [
-      { id: 1, title: 'Mathématiques Avancées', code: 'MATH-301', teacher: 'M. Dupont', school: 'École Saint-Jean', credits: 4, students: 45, status: 'active', lessons: 24 },
-      { id: 2, title: 'Physique Quantique', code: 'PHY-401', teacher: 'M. Bernard', school: 'Lycée National', credits: 4, students: 32, status: 'active', lessons: 20 },
-      { id: 3, title: 'Littérature Française', code: 'FR-201', teacher: 'Mme Martin', school: 'École Saint-Jean', credits: 3, students: 38, status: 'active', lessons: 18 },
-      { id: 4, title: 'Programmation Python', code: 'CS-101', teacher: 'Mme Moreau', school: 'Institut Technique', credits: 4, students: 52, status: 'active', lessons: 30 },
-      { id: 5, title: 'Histoire du 20ème Siècle', code: 'HIST-202', teacher: 'M. Robert', school: 'Collège Central', credits: 3, students: 28, status: 'inactive', lessons: 16 },
-      { id: 6, title: 'Anglais Business', code: 'EN-301', teacher: 'Mme Petit', school: 'École Saint-Jean', credits: 2, students: 35, status: 'active', lessons: 22 },
-      { id: 7, title: 'Chimie Organique', code: 'CHEM-301', teacher: 'M. Simon', school: 'Lycée National', credits: 4, students: 40, status: 'active', lessons: 26 },
-      { id: 8, title: 'Biologie Cellulaire', code: 'BIO-201', teacher: 'M. Leroy', school: 'Collège Central', credits: 3, students: 42, status: 'draft', lessons: 0 },
-    ];
-    
-    setTimeout(() => {
-      setCourses(sampleCourses);
-      setLoading(false);
-    }, 500);
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [coursesRes, teachersRes] = await Promise.all([
+        courseAPI.getAll(),
+        userAPI.getAll({ role: 'teacher' }) // Fetch teachers for the dropdown
+      ]);
+
+      if (coursesRes.success) {
+        // Map API data to frontend format
+        const mappedCourses = coursesRes.data.map(course => ({
+          ...course,
+          teacher: course.teacher_name || 'Non assigné',
+          school: course.school_name || 'Non assigné',
+          status: course.is_active ? 'active' : 'inactive',
+          students: 0, // TODO: Fetch real student count
+          lessons: 0 // TODO: Fetch real lesson count
+        }));
+        setCourses(mappedCourses);
+      }
+
+      if (teachersRes.success) {
+        setTeachers(teachersRes.data);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCourses = async () => {
+    try {
+      const response = await courseAPI.getAll();
+      if (response.success) {
+        const mappedCourses = response.data.map(course => ({
+          ...course,
+          teacher: course.teacher_name || 'Non assigné',
+          school: course.school_name || 'Non assigné',
+          status: course.is_active ? 'active' : 'inactive',
+          students: 0,
+          lessons: 0
+        }));
+        setCourses(mappedCourses);
+      }
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+    }
+  };
 
   const filteredCourses = courses.filter(course => {
     const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         course.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         course.teacher.toLowerCase().includes(searchTerm.toLowerCase());
+      course.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      course.teacher.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || course.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer ce cours ?')) {
-      setCourses(courses.filter(c => c.id !== id));
+      try {
+        await courseAPI.delete(id);
+        setCourses(courses.filter(c => c.id !== id));
+      } catch (error) {
+        console.error('Error deleting course:', error);
+        alert('Erreur lors de la suppression du cours');
+      }
     }
   };
 
-  const toggleStatus = (id) => {
-    setCourses(courses.map(c => {
-      if (c.id === id) {
-        return { ...c, status: c.status === 'active' ? 'inactive' : 'active' };
-      }
-      return c;
-    }));
+  const toggleStatus = async (id, currentStatus) => {
+    try {
+      const newStatus = currentStatus === 'active' ? false : true;
+      await courseAPI.update(id, { is_active: newStatus });
+      setCourses(courses.map(c => {
+        if (c.id === id) {
+          return { ...c, status: newStatus ? 'active' : 'inactive', is_active: newStatus };
+        }
+        return c;
+      }));
+    } catch (error) {
+      console.error('Error updating course status:', error);
+      alert('Erreur lors de la mise à jour du statut');
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -76,8 +127,8 @@ const CoursesPage = () => {
     };
     const labels = { active: 'Actif', inactive: 'Inactif', draft: 'Brouillon' };
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status]}`}>
-        {labels[status]}
+      <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status] || styles.inactive}`}>
+        {labels[status] || labels.inactive}
       </span>
     );
   };
@@ -113,7 +164,6 @@ const CoursesPage = () => {
             <option value="all">Tous les statuts</option>
             <option value="active">Actif</option>
             <option value="inactive">Inactif</option>
-            <option value="draft">Brouillon</option>
           </select>
         </div>
         <div className="flex items-center gap-3">
@@ -164,7 +214,7 @@ const CoursesPage = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-800">
-                {courses.reduce((acc, c) => acc + c.students, 0)}
+                {courses.reduce((acc, c) => acc + (c.students || 0), 0)}
               </p>
               <p className="text-sm text-gray-500">Étudiants inscrits</p>
             </div>
@@ -177,7 +227,7 @@ const CoursesPage = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-800">
-                {courses.reduce((acc, c) => acc + c.lessons, 0)}
+                {courses.reduce((acc, c) => acc + (c.lessons || 0), 0)}
               </p>
               <p className="text-sm text-gray-500">Leçons total</p>
             </div>
@@ -210,7 +260,7 @@ const CoursesPage = () => {
                     </div>
                     <div>
                       <p className="font-medium text-gray-800">{course.title}</p>
-                      <p className="text-sm text-gray-500">{course.lessons} leçons</p>
+                      <p className="text-sm text-gray-500">{course.lessons || 0} leçons</p>
                     </div>
                   </div>
                 </td>
@@ -225,7 +275,7 @@ const CoursesPage = () => {
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-600">{course.students}</span>
+                    <span className="text-gray-600">{course.students || 0}</span>
                   </div>
                 </td>
                 <td className="px-6 py-4">{getStatusBadge(course.status)}</td>
@@ -242,7 +292,7 @@ const CoursesPage = () => {
                       <Edit className="w-4 h-4 text-gray-600" />
                     </button>
                     <button
-                      onClick={() => toggleStatus(course.id)}
+                      onClick={() => toggleStatus(course.id, course.status)}
                       className="p-2 hover:bg-gray-100 rounded-lg"
                       title={course.status === 'active' ? 'Désactiver' : 'Activer'}
                     >
@@ -271,15 +321,31 @@ const CoursesPage = () => {
       {showModal && (
         <CourseModal
           course={editingCourse}
+          teachers={teachers}
           onClose={() => { setShowModal(false); setEditingCourse(null); }}
-          onSave={(data) => {
-            if (editingCourse) {
-              setCourses(courses.map(c => c.id === editingCourse.id ? { ...c, ...data } : c));
-            } else {
-              setCourses([...courses, { ...data, id: Date.now(), students: 0, lessons: 0 }]);
+          onSave={async (data) => {
+            try {
+              if (editingCourse) {
+                await courseAPI.update(editingCourse.id, {
+                  ...data,
+                  is_active: data.status === 'active'
+                });
+              } else {
+                // Get current user's school_id (assuming it's stored in localStorage or context)
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                await courseAPI.create({
+                  ...data,
+                  school_id: user.school_id,
+                  is_active: data.status === 'active'
+                });
+              }
+              fetchCourses(); // Refresh list
+              setShowModal(false);
+              setEditingCourse(null);
+            } catch (error) {
+              console.error('Error saving course:', error);
+              alert('Erreur lors de l\'enregistrement du cours');
             }
-            setShowModal(false);
-            setEditingCourse(null);
           }}
         />
       )}
@@ -287,12 +353,11 @@ const CoursesPage = () => {
   );
 };
 
-const CourseModal = ({ course, onClose, onSave }) => {
+const CourseModal = ({ course, teachers, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     title: course?.title || '',
     code: course?.code || '',
-    teacher: course?.teacher || '',
-    school: course?.school || '',
+    teacher_id: course?.teacher_id || '',
     credits: course?.credits || 3,
     status: course?.status || 'draft',
     description: course?.description || '',
@@ -304,7 +369,7 @@ const CourseModal = ({ course, onClose, onSave }) => {
         <h3 className="text-xl font-bold text-gray-800 mb-6">
           {course ? 'Modifier le cours' : 'Nouveau cours'}
         </h3>
-        
+
         <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Titre du cours</label>
@@ -344,30 +409,16 @@ const CourseModal = ({ course, onClose, onSave }) => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Professeur</label>
             <select
-              value={formData.teacher}
-              onChange={(e) => setFormData({ ...formData, teacher: e.target.value })}
+              value={formData.teacher_id}
+              onChange={(e) => setFormData({ ...formData, teacher_id: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Sélectionner un professeur</option>
-              <option value="M. Dupont">M. Dupont</option>
-              <option value="Mme Martin">Mme Martin</option>
-              <option value="M. Bernard">M. Bernard</option>
-              <option value="Mme Moreau">Mme Moreau</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">École</label>
-            <select
-              value={formData.school}
-              onChange={(e) => setFormData({ ...formData, school: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Sélectionner une école</option>
-              <option value="École Saint-Jean">École Saint-Jean</option>
-              <option value="Lycée National">Lycée National</option>
-              <option value="Collège Central">Collège Central</option>
-              <option value="Institut Technique">Institut Technique</option>
+              {teachers.map((teacher) => (
+                <option key={teacher.id} value={teacher.id}>
+                  {teacher.full_name}
+                </option>
+              ))}
             </select>
           </div>
 

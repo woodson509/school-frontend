@@ -15,6 +15,7 @@ import {
   Calendar,
   ChevronRight,
 } from 'lucide-react';
+import { classAPI } from '../../services/api';
 
 const ClassesPage = () => {
   const [classes, setClasses] = useState([]);
@@ -25,35 +26,51 @@ const ClassesPage = () => {
   const [selectedLevel, setSelectedLevel] = useState('all');
 
   useEffect(() => {
-    const sampleClasses = [
-      { id: 1, name: '6ème A', level: 'Collège', year: '2024-2025', students: 32, teacher: 'M. Dupont', room: 'A101', schedule: 'Matin' },
-      { id: 2, name: '6ème B', level: 'Collège', year: '2024-2025', students: 30, teacher: 'Mme Martin', room: 'A102', schedule: 'Matin' },
-      { id: 3, name: '5ème A', level: 'Collège', year: '2024-2025', students: 28, teacher: 'M. Bernard', room: 'A103', schedule: 'Matin' },
-      { id: 4, name: '4ème A', level: 'Collège', year: '2024-2025', students: 35, teacher: 'Mme Petit', room: 'B201', schedule: 'Après-midi' },
-      { id: 5, name: '3ème A', level: 'Collège', year: '2024-2025', students: 33, teacher: 'M. Robert', room: 'B202', schedule: 'Après-midi' },
-      { id: 6, name: 'Terminale S1', level: 'Lycée', year: '2024-2025', students: 25, teacher: 'M. Laurent', room: 'C301', schedule: 'Matin' },
-      { id: 7, name: 'Terminale S2', level: 'Lycée', year: '2024-2025', students: 27, teacher: 'Mme Moreau', room: 'C302', schedule: 'Matin' },
-      { id: 8, name: 'Première L', level: 'Lycée', year: '2024-2025', students: 22, teacher: 'M. Simon', room: 'C303', schedule: 'Après-midi' },
-    ];
-    
-    setTimeout(() => {
-      setClasses(sampleClasses);
-      setLoading(false);
-    }, 500);
+    fetchClasses();
   }, []);
+
+  const fetchClasses = async () => {
+    try {
+      setLoading(true);
+      const response = await classAPI.getAll();
+      if (response.success) {
+        // Map API data to frontend format
+        const mappedClasses = response.data.map(cls => ({
+          ...cls,
+          level: cls.grade_level,
+          year: cls.school_year,
+          teacher: cls.teacher_name || 'Non assigné',
+          students: 0, // TODO: Fetch real count
+          room: 'Non défini', // Not in DB yet
+          schedule: 'Non défini' // Not in DB yet
+        }));
+        setClasses(mappedClasses);
+      }
+    } catch (error) {
+      console.error('Error fetching classes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const levels = ['all', 'Primaire', 'Collège', 'Lycée', 'Université'];
 
   const filteredClasses = classes.filter(cls => {
     const matchesSearch = cls.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         cls.teacher.toLowerCase().includes(searchTerm.toLowerCase());
+      cls.teacher.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesLevel = selectedLevel === 'all' || cls.level === selectedLevel;
     return matchesSearch && matchesLevel;
   });
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette classe ?')) {
-      setClasses(classes.filter(c => c.id !== id));
+      try {
+        await classAPI.delete(id);
+        setClasses(classes.filter(c => c.id !== id));
+      } catch (error) {
+        console.error('Error deleting class:', error);
+        alert('Erreur lors de la suppression de la classe');
+      }
     }
   };
 
@@ -120,7 +137,7 @@ const ClassesPage = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-800">
-                {classes.reduce((acc, c) => acc + c.students, 0)}
+                {classes.reduce((acc, c) => acc + (c.students || 0), 0)}
               </p>
               <p className="text-sm text-gray-500">Étudiants</p>
             </div>
@@ -143,7 +160,7 @@ const ClassesPage = () => {
               <BookOpen className="w-6 h-6 text-orange-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-800">29</p>
+              <p className="text-2xl font-bold text-gray-800">0</p>
               <p className="text-sm text-gray-500">Moyenne/classe</p>
             </div>
           </div>
@@ -185,13 +202,12 @@ const ClassesPage = () => {
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-600">{cls.students}</span>
+                    <span className="text-gray-600">{cls.students || 0}</span>
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <span className={`px-3 py-1 rounded-full text-sm ${
-                    cls.schedule === 'Matin' ? 'bg-yellow-100 text-yellow-700' : 'bg-purple-100 text-purple-700'
-                  }`}>
+                  <span className={`px-3 py-1 rounded-full text-sm ${cls.schedule === 'Matin' ? 'bg-yellow-100 text-yellow-700' : 'bg-purple-100 text-purple-700'
+                    }`}>
                     {cls.schedule}
                   </span>
                 </td>
@@ -225,14 +241,28 @@ const ClassesPage = () => {
         <ClassModal
           classData={editingClass}
           onClose={() => { setShowModal(false); setEditingClass(null); }}
-          onSave={(data) => {
-            if (editingClass) {
-              setClasses(classes.map(c => c.id === editingClass.id ? { ...c, ...data } : c));
-            } else {
-              setClasses([...classes, { ...data, id: Date.now(), students: 0 }]);
+          onSave={async (data) => {
+            try {
+              if (editingClass) {
+                await classAPI.update(editingClass.id, {
+                  ...data,
+                  grade_level: data.level,
+                  school_year: data.year
+                });
+              } else {
+                await classAPI.create({
+                  ...data,
+                  grade_level: data.level,
+                  school_year: data.year
+                });
+              }
+              fetchClasses();
+              setShowModal(false);
+              setEditingClass(null);
+            } catch (error) {
+              console.error('Error saving class:', error);
+              alert('Erreur lors de l\'enregistrement de la classe');
             }
-            setShowModal(false);
-            setEditingClass(null);
           }}
         />
       )}
@@ -245,7 +275,7 @@ const ClassModal = ({ classData, onClose, onSave }) => {
     name: classData?.name || '',
     level: classData?.level || 'Collège',
     year: classData?.year || '2024-2025',
-    teacher: classData?.teacher || '',
+    teacher_id: classData?.teacher_id || '',
     room: classData?.room || '',
     schedule: classData?.schedule || 'Matin',
   });
@@ -256,7 +286,7 @@ const ClassModal = ({ classData, onClose, onSave }) => {
         <h3 className="text-xl font-bold text-gray-800 mb-6">
           {classData ? 'Modifier la classe' : 'Nouvelle classe'}
         </h3>
-        
+
         <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Nom de la classe</label>
@@ -294,15 +324,7 @@ const ClassModal = ({ classData, onClose, onSave }) => {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Professeur principal</label>
-            <input
-              type="text"
-              value={formData.teacher}
-              onChange={(e) => setFormData({ ...formData, teacher: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          {/* Note: Teacher selection would ideally fetch teachers from API. */}
 
           <div className="grid grid-cols-2 gap-4">
             <div>

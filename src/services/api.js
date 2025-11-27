@@ -121,6 +121,19 @@ export const examAPI = {
     });
   },
 
+  update: async (id, examData) => {
+    return fetchWithAuth(`/exams/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(examData),
+    });
+  },
+
+  delete: async (id) => {
+    return fetchWithAuth(`/exams/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
   start: async (examId) => {
     return fetchWithAuth(`/exams/${examId}/start`, {
       method: 'POST',
@@ -542,6 +555,23 @@ export const subjectAPI = {
 };
 
 /**
+ * Grade APIs
+ */
+export const gradeAPI = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/grades${queryString ? `?${queryString}` : ''}`);
+  },
+
+  update: async (id, gradeData) => {
+    return fetchWithAuth(`/grades/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(gradeData),
+    });
+  },
+};
+
+/**
  * Offline Storage Helpers
  */
 export const offlineStorage = {
@@ -635,5 +665,6 @@ export default {
   userAPI,
   classAPI,
   subjectAPI,
+  gradeAPI,
   offlineStorage,
 };
