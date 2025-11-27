@@ -220,26 +220,7 @@ export const agentAPI = {
   },
 };
 
-/**
- * Dashboard APIs
- */
-export const dashboardAPI = {
-  getSuperAdminDashboard: async () => {
-    return fetchWithAuth('/dashboard/superadmin');
-  },
 
-  getAdminDashboard: async () => {
-    return fetchWithAuth('/dashboard/admin');
-  },
-
-  getTeacherDashboard: async () => {
-    return fetchWithAuth('/dashboard/teacher');
-  },
-
-  getStudentDashboard: async () => {
-    return fetchWithAuth('/dashboard/student');
-  },
-};
 
 /**
  * User Management APIs
