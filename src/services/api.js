@@ -276,6 +276,56 @@ export const userAPI = {
 };
 
 /**
+ * Role & Permission APIs
+ */
+export const roleAPI = {
+  getAll: async () => {
+    return fetchWithAuth('/roles');
+  },
+
+  getById: async (id) => {
+    return fetchWithAuth(`/roles/${id}`);
+  },
+
+  create: async (roleData) => {
+    return fetchWithAuth('/roles', {
+      method: 'POST',
+      body: JSON.stringify(roleData),
+    });
+  },
+
+  update: async (id, roleData) => {
+    return fetchWithAuth(`/roles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(roleData),
+    });
+  },
+
+  delete: async (id) => {
+    return fetchWithAuth(`/roles/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getPermissions: async (id) => {
+    return fetchWithAuth(`/roles/${id}/permissions`);
+  },
+
+  updatePermissions: async (id, permissionIds) => {
+    return fetchWithAuth(`/roles/${id}/permissions`, {
+      method: 'PUT',
+      body: JSON.stringify({ permission_ids: permissionIds }),
+    });
+  },
+};
+
+export const permissionAPI = {
+  getAll: async () => {
+    return fetchWithAuth('/permissions');
+  },
+};
+
+/**
  * School APIs
  */
 export const schoolAPI = {
