@@ -667,4 +667,103 @@ export default {
   subjectAPI,
   gradeAPI,
   offlineStorage,
+  lessonAPI,
+  enrollmentAPI,
+  announcementAPI,
+};
+
+/**
+ * Lesson APIs
+ */
+export const lessonAPI = {
+  getByCourse: async (courseId) => {
+    return fetchWithAuth(`/courses/${courseId}/lessons`);
+  },
+
+  getById: async (id) => {
+    return fetchWithAuth(`/lessons/${id}`);
+  },
+
+  create: async (lessonData) => {
+    return fetchWithAuth('/lessons', {
+      method: 'POST',
+      body: JSON.stringify(lessonData),
+    });
+  },
+
+  update: async (id, lessonData) => {
+    return fetchWithAuth(`/lessons/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(lessonData),
+    });
+  },
+
+  delete: async (id) => {
+    return fetchWithAuth(`/lessons/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+/**
+ * Enrollment APIs
+ */
+export const enrollmentAPI = {
+  enroll: async (enrollmentData) => {
+    return fetchWithAuth('/enrollments', {
+      method: 'POST',
+      body: JSON.stringify(enrollmentData),
+    });
+  },
+
+  getByCourse: async (courseId) => {
+    return fetchWithAuth(`/courses/${courseId}/enrollments`);
+  },
+
+  getByStudent: async (studentId) => {
+    return fetchWithAuth(`/students/${studentId}/enrollments`);
+  },
+
+  update: async (id, data) => {
+    return fetchWithAuth(`/enrollments/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  unenroll: async (id) => {
+    return fetchWithAuth(`/enrollments/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+/**
+ * Announcement APIs
+ */
+export const announcementAPI = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/announcements${queryString ? `?${queryString}` : ''}`);
+  },
+
+  create: async (data) => {
+    return fetchWithAuth('/announcements', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (id, data) => {
+    return fetchWithAuth(`/announcements/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async (id) => {
+    return fetchWithAuth(`/announcements/${id}`, {
+      method: 'DELETE',
+    });
+  },
 };

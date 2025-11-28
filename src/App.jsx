@@ -26,6 +26,7 @@ import ExamPage from './pages/ExamPage';
 const AdminDashboardPage = lazy(() => import('./pages/admin/DashboardPage'));
 const AdminUsersPage = lazy(() => import('./pages/admin/UsersPage'));
 const AdminCoursesPage = lazy(() => import('./pages/admin/CoursesPage'));
+const AdminCourseDetailsPage = lazy(() => import('./pages/admin/CourseDetailsPage'));
 const AdminSubjectsPage = lazy(() => import('./pages/admin/SubjectsPage'));
 const AdminCurriculaPage = lazy(() => import('./pages/admin/CurriculaPage'));
 const AdminClassesPage = lazy(() => import('./pages/admin/ClassesPage'));
@@ -218,6 +219,7 @@ const AppRoutes = () => {
               {/* Academic Routes */}
               <Route path="users" element={<AdminUsersPage />} />
               <Route path="courses" element={<AdminCoursesPage />} />
+              <Route path="courses/:id" element={<AdminCourseDetailsPage />} />
               <Route path="subjects" element={<AdminSubjectsPage />} />
               <Route path="curricula" element={<AdminCurriculaPage />} />
               <Route path="classes" element={<AdminClassesPage />} />

@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   BookOpen,
   Search,
@@ -21,6 +22,7 @@ import {
 import { courseAPI, userAPI } from '../../services/api';
 
 const CoursesPage = () => {
+  const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -281,7 +283,11 @@ const CoursesPage = () => {
                 <td className="px-6 py-4">{getStatusBadge(course.status)}</td>
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-end gap-2">
-                    <button className="p-2 hover:bg-gray-100 rounded-lg" title="Voir">
+                    <button
+                      onClick={() => navigate(`/admin/courses/${course.id}`)}
+                      className="p-2 hover:bg-gray-100 rounded-lg"
+                      title="Voir"
+                    >
                       <Eye className="w-4 h-4 text-gray-600" />
                     </button>
                     <button
