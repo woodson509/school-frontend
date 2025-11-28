@@ -284,7 +284,7 @@ const CoursesPage = () => {
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-end gap-2">
                     <button
-                      onClick={() => navigate(`/admin/courses/${course.id}`)}
+                      onClick={() => navigate(`/courses/${course.id}`)}
                       className="p-2 hover:bg-gray-100 rounded-lg"
                       title="Voir"
                     >

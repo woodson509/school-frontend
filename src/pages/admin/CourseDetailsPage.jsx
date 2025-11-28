@@ -129,7 +129,7 @@ const CourseDetailsPage = () => {
             <div className="text-center py-12">
                 <h2 className="text-2xl font-bold text-gray-800">Cours non trouvé</h2>
                 <button
-                    onClick={() => navigate('/admin/courses')}
+                    onClick={() => navigate('/courses')}
                     className="mt-4 text-blue-600 hover:underline"
                 >
                     Retour aux cours
