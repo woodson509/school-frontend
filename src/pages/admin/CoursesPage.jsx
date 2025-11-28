@@ -20,14 +20,17 @@ import {
   XCircle,
 } from 'lucide-react';
 import { courseAPI, userAPI } from '../../services/api';
+import CourseFormModal from '../../components/admin/CourseFormModal';
 
 const CoursesPage = () => {
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [filters, setFilters] = useState({
+    search: '',
+    status: 'all'
+  });
   const [showModal, setShowModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
 
