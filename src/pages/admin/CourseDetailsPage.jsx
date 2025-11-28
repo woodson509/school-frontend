@@ -18,9 +18,11 @@ import {
     PlayCircle,
     UserPlus
 } from 'lucide-react';
-import { courseAPI, lessonAPI, enrollmentAPI } from '../../services/api';
+import { courseAPI, lessonAPI, enrollmentAPI, assignmentAPI, userAPI } from '../../services/api';
 import LessonFormModal from '../../components/admin/LessonFormModal';
 import EnrollmentFormModal from '../../components/admin/EnrollmentFormModal';
+import CourseFormModal from '../../components/admin/CourseFormModal';
+import AssignmentFormModal from '../../components/admin/AssignmentFormModal';
 
 const CourseDetailsPage = () => {
     const { id } = useParams();
@@ -28,11 +30,16 @@ const CourseDetailsPage = () => {
     const [course, setCourse] = useState(null);
     const [lessons, setLessons] = useState([]);
     const [enrollments, setEnrollments] = useState([]);
+    const [assignments, setAssignments] = useState([]);
+    const [teachers, setTeachers] = useState([]);
     const [activeTab, setActiveTab] = useState('lessons');
     const [loading, setLoading] = useState(true);
     const [showLessonModal, setShowLessonModal] = useState(false);
     const [showEnrollModal, setShowEnrollModal] = useState(false);
+    const [showEditCourseModal, setShowEditCourseModal] = useState(false);
+    const [showAssignmentModal, setShowAssignmentModal] = useState(false);
     const [editingLesson, setEditingLesson] = useState(null);
+    const [editingAssignment, setEditingAssignment] = useState(null);
 
     useEffect(() => {
         fetchCourseData();
@@ -41,15 +48,19 @@ const CourseDetailsPage = () => {
     const fetchCourseData = async () => {
         try {
             setLoading(true);
-            const [courseRes, lessonsRes, enrollmentsRes] = await Promise.all([
+            const [courseRes, lessonsRes, enrollmentsRes, assignmentsRes, teachersRes] = await Promise.all([
                 courseAPI.getById(id),
                 lessonAPI.getByCourse(id),
-                enrollmentAPI.getByCourse(id)
+                enrollmentAPI.getByCourse(id),
+                assignmentAPI.getByCourse(id),
+                userAPI.getAll({ role: 'teacher' })
             ]);
 
             if (courseRes.success) setCourse(courseRes.data);
             if (lessonsRes.success) setLessons(lessonsRes.data);
             if (enrollmentsRes.success) setEnrollments(enrollmentsRes.data);
+            if (assignmentsRes.success) setAssignments(assignmentsRes.data);
+            if (teachersRes.success) setTeachers(teachersRes.data);
         } catch (error) {
             console.error('Error fetching course details:', error);
         } finally {
@@ -116,6 +127,52 @@ const CourseDetailsPage = () => {
         }
     };
 
+    const handleSaveCourse = async (courseData) => {
+        try {
+            const response = await courseAPI.update(id, courseData);
+            if (response.success) {
+                setCourse(response.data);
+                setShowEditCourseModal(false);
+            }
+        } catch (error) {
+            console.error('Error updating course:', error);
+            alert('Erreur lors de la mise à jour du cours');
+        }
+    };
+
+    const handleSaveAssignment = async (assignmentData) => {
+        try {
+            if (editingAssignment) {
+                const response = await assignmentAPI.update(editingAssignment.id, assignmentData);
+                if (response.success) {
+                    setAssignments(assignments.map(a => a.id === editingAssignment.id ? response.data : a));
+                }
+            } else {
+                const response = await assignmentAPI.create(assignmentData);
+                if (response.success) {
+                    setAssignments([...assignments, response.data]);
+                }
+            }
+            setShowAssignmentModal(false);
+            setEditingAssignment(null);
+        } catch (error) {
+            console.error('Error saving assignment:', error);
+            alert('Erreur lors de l\'enregistrement du devoir');
+        }
+    };
+
+    const handleDeleteAssignment = async (assignmentId) => {
+        if (confirm('Êtes-vous sûr de vouloir supprimer ce devoir ?')) {
+            try {
+                await assignmentAPI.delete(assignmentId);
+                setAssignments(assignments.filter(a => a.id !== assignmentId));
+            } catch (error) {
+                console.error('Error deleting assignment:', error);
+                alert('Erreur lors de la suppression');
+            }
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
@@ -173,13 +230,16 @@ const CourseDetailsPage = () => {
 
                     <div className="flex flex-col gap-3">
                         <button
-                            onClick={() => navigate(`/admin/courses/edit/${course.id}`)}
+                            onClick={() => setShowEditCourseModal(true)}
                             className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2 justify-center"
                         >
                             <Edit className="w-4 h-4" />
                             Modifier
                         </button>
-                        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 justify-center shadow-sm">
+                        <button
+                            onClick={() => alert('Fonctionnalité disponible prochainement')}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 justify-center shadow-sm"
+                        >
                             <PlayCircle className="w-4 h-4" />
                             Voir comme étudiant
                         </button>
@@ -391,13 +451,83 @@ const CourseDetailsPage = () => {
                 )}
 
                 {activeTab === 'assignments' && (
-                    <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-                        <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-gray-500 font-medium">Module Devoirs & Examens</p>
-                        <p className="text-sm text-gray-400 mb-4">Cette fonctionnalité sera bientôt disponible</p>
-                        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
-                            Créer un devoir
-                        </button>
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-semibold text-gray-800">Devoirs & Examens</h3>
+                            <button
+                                onClick={() => { setEditingAssignment(null); setShowAssignmentModal(true); }}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Créer un devoir
+                            </button>
+                        </div>
+
+                        {assignments.length === 0 ? (
+                            <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                                <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                                <p className="text-gray-500 font-medium">Aucun devoir pour le moment</p>
+                                <p className="text-sm text-gray-400 mb-4">Créez des évaluations pour vos étudiants</p>
+                                <button
+                                    onClick={() => { setEditingAssignment(null); setShowAssignmentModal(true); }}
+                                    className="text-blue-600 hover:underline text-sm"
+                                >
+                                    Créer le premier devoir
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {assignments.map((assignment) => (
+                                    <div key={assignment.id} className="bg-white p-4 rounded-xl border border-gray-200 hover:border-blue-300 transition-all group">
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex gap-4">
+                                                <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600 font-bold shrink-0">
+                                                    <FileText className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                                                        {assignment.title}
+                                                    </h4>
+                                                    <p className="text-sm text-gray-500 line-clamp-2 mb-2">
+                                                        {assignment.description || 'Pas de description'}
+                                                    </p>
+                                                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                                                        <span className="flex items-center gap-1">
+                                                            <Calendar className="w-3 h-3" />
+                                                            Pour le {new Date(assignment.due_date).toLocaleDateString()}
+                                                        </span>
+                                                        <span className="bg-gray-100 px-2 py-0.5 rounded-full">
+                                                            {assignment.points} points
+                                                        </span>
+                                                        <span className={`px-2 py-0.5 rounded-full ${assignment.is_published ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                                            {assignment.is_published ? 'Publié' : 'Brouillon'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingAssignment(assignment);
+                                                        setShowAssignmentModal(true);
+                                                    }}
+                                                    className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteAssignment(assignment.id)}
+                                                    className="p-2 hover:bg-red-50 rounded-lg text-red-600"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -420,6 +550,27 @@ const CourseDetailsPage = () => {
                     currentEnrollments={enrollments}
                     onClose={() => setShowEnrollModal(false)}
                     onSave={handleSaveEnrollment}
+                />
+            )}
+
+            {showEditCourseModal && (
+                <CourseFormModal
+                    course={course}
+                    teachers={teachers}
+                    onClose={() => setShowEditCourseModal(false)}
+                    onSave={handleSaveCourse}
+                />
+            )}
+
+            {showAssignmentModal && (
+                <AssignmentFormModal
+                    assignment={editingAssignment}
+                    courseId={id}
+                    onClose={() => {
+                        setShowAssignmentModal(false);
+                        setEditingAssignment(null);
+                    }}
+                    onSave={handleSaveAssignment}
                 />
             )}
         </div>

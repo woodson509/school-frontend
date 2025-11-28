@@ -669,6 +669,7 @@ export default {
   offlineStorage,
   lessonAPI,
   enrollmentAPI,
+  assignmentAPI,
   announcementAPI,
 };
 
@@ -733,6 +734,39 @@ export const enrollmentAPI = {
 
   unenroll: async (id) => {
     return fetchWithAuth(`/enrollments/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+/**
+ * Assignment APIs
+ */
+export const assignmentAPI = {
+  getByCourse: async (courseId) => {
+    return fetchWithAuth(`/courses/${courseId}/assignments`);
+  },
+
+  getById: async (id) => {
+    return fetchWithAuth(`/assignments/${id}`);
+  },
+
+  create: async (assignmentData) => {
+    return fetchWithAuth('/assignments', {
+      method: 'POST',
+      body: JSON.stringify(assignmentData),
+    });
+  },
+
+  update: async (id, assignmentData) => {
+    return fetchWithAuth(`/assignments/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(assignmentData),
+    });
+  },
+
+  delete: async (id) => {
+    return fetchWithAuth(`/assignments/${id}`, {
       method: 'DELETE',
     });
   },

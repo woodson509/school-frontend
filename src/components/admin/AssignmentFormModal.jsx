@@ -1,35 +1,33 @@
 /**
- * Lesson Form Modal
- * Modal for creating and editing lessons
+ * Assignment Form Modal
+ * Modal for creating and editing assignments
  */
 
 import { useState, useEffect } from 'react';
-import { X, Save, Video, FileText, Link as LinkIcon } from 'lucide-react';
+import { X, Save, Calendar, FileText } from 'lucide-react';
 
-const LessonFormModal = ({ lesson, courseId, onClose, onSave }) => {
+const AssignmentFormModal = ({ assignment, courseId, onClose, onSave }) => {
     const [formData, setFormData] = useState({
         title: '',
         description: '',
-        content: '',
-        video_url: '',
-        duration_minutes: '',
-        is_published: false,
-        type: 'text'
+        due_date: '',
+        points: 100,
+        type: 'homework', // homework, exam, project
+        is_published: false
     });
 
     useEffect(() => {
-        if (lesson) {
+        if (assignment) {
             setFormData({
-                title: lesson.title || '',
-                description: lesson.description || '',
-                content: lesson.content || '',
-                video_url: lesson.video_url || '',
-                duration_minutes: lesson.duration_minutes || '',
-                is_published: lesson.is_published || false,
-                type: lesson.type || 'text'
+                title: assignment.title || '',
+                description: assignment.description || '',
+                due_date: assignment.due_date ? new Date(assignment.due_date).toISOString().slice(0, 16) : '',
+                points: assignment.points || 100,
+                type: assignment.type || 'homework',
+                is_published: assignment.is_published || false
             });
         }
-    }, [lesson]);
+    }, [assignment]);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -44,7 +42,7 @@ const LessonFormModal = ({ lesson, courseId, onClose, onSave }) => {
         onSave({
             ...formData,
             course_id: courseId,
-            duration_minutes: formData.duration_minutes ? parseInt(formData.duration_minutes) : null
+            points: parseInt(formData.points)
         });
     };
 
@@ -53,7 +51,7 @@ const LessonFormModal = ({ lesson, courseId, onClose, onSave }) => {
             <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
                     <h2 className="text-xl font-bold text-gray-800">
-                        {lesson ? 'Modifier la leçon' : 'Nouvelle leçon'}
+                        {assignment ? 'Modifier le devoir' : 'Nouveau devoir'}
                     </h2>
                     <button
                         onClick={onClose}
@@ -67,7 +65,7 @@ const LessonFormModal = ({ lesson, courseId, onClose, onSave }) => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Titre de la leçon *
+                                Titre du devoir *
                             </label>
                             <input
                                 type="text"
@@ -76,27 +74,43 @@ const LessonFormModal = ({ lesson, courseId, onClose, onSave }) => {
                                 value={formData.title}
                                 onChange={handleChange}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="Ex: Introduction à l'algèbre"
+                                placeholder="Ex: Dissertation sur la Révolution"
                             />
                         </div>
 
                         <div className="col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Description courte
+                                Description / Instructions
                             </label>
                             <textarea
                                 name="description"
-                                rows="2"
+                                rows="4"
                                 value={formData.description}
                                 onChange={handleChange}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="Bref résumé du contenu..."
+                                placeholder="Instructions détaillées pour l'étudiant..."
                             />
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Type de contenu
+                                Date limite de rendu
+                            </label>
+                            <div className="relative">
+                                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                <input
+                                    type="datetime-local"
+                                    name="due_date"
+                                    value={formData.due_date}
+                                    onChange={handleChange}
+                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Type d'évaluation
                             </label>
                             <select
                                 name="type"
@@ -104,60 +118,25 @@ const LessonFormModal = ({ lesson, courseId, onClose, onSave }) => {
                                 onChange={handleChange}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             >
-                                <option value="text">Texte / Article</option>
-                                <option value="video">Vidéo</option>
-                                <option value="resource">Ressource / Fichier</option>
+                                <option value="homework">Devoir maison</option>
+                                <option value="exam">Examen / Contrôle</option>
+                                <option value="project">Projet</option>
+                                <option value="quiz">Quiz</option>
                             </select>
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Durée estimée (minutes)
+                                Points maximum
                             </label>
                             <input
                                 type="number"
-                                name="duration_minutes"
-                                min="1"
-                                value={formData.duration_minutes}
+                                name="points"
+                                min="0"
+                                value={formData.points}
                                 onChange={handleChange}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
-                        </div>
-
-                        {formData.type === 'video' && (
-                            <div className="col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    URL de la vidéo (YouTube, Vimeo...)
-                                </label>
-                                <div className="relative">
-                                    <Video className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                    <input
-                                        type="url"
-                                        name="video_url"
-                                        value={formData.video_url}
-                                        onChange={handleChange}
-                                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="https://youtube.com/..."
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Contenu détaillé
-                            </label>
-                            <textarea
-                                name="content"
-                                rows="8"
-                                value={formData.content}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-                                placeholder="Contenu complet de la leçon (Markdown ou HTML supporté)..."
-                            />
-                            <p className="text-xs text-gray-500 mt-1">
-                                Vous pourrez ajouter des fichiers joints après la création.
-                            </p>
                         </div>
 
                         <div className="col-span-2">
@@ -198,4 +177,4 @@ const LessonFormModal = ({ lesson, courseId, onClose, onSave }) => {
     );
 };
 
-export default LessonFormModal;
+export default AssignmentFormModal;
