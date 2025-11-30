@@ -1,8 +1,3 @@
-/**
- * Attendance Management Page
- * Track student attendance
- */
-
 import { useState, useEffect } from 'react';
 import {
   ClipboardList,
@@ -18,38 +13,101 @@ import {
   Check,
   X,
   AlertCircle,
+  Save,
 } from 'lucide-react';
+import { classAPI, attendanceAPI } from '../../services/api';
 
 const AttendancePage = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [selectedClass, setSelectedClass] = useState('6ème A');
+  const [selectedClassId, setSelectedClassId] = useState('');
+  const [classes, setClasses] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const classes = ['6ème A', '6ème B', '5ème A', '5ème B', '4ème A', '4ème B'];
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const sampleAttendance = [
-      { id: 1, student: 'Jean Pierre', status: 'present', arrivalTime: '07:55', notes: '' },
-      { id: 2, student: 'Marie Claire', status: 'present', arrivalTime: '07:50', notes: '' },
-      { id: 3, student: 'Paul Martin', status: 'absent', arrivalTime: null, notes: 'Maladie' },
-      { id: 4, student: 'Sophie Durand', status: 'late', arrivalTime: '08:15', notes: 'Retard transport' },
-      { id: 5, student: 'Louis Bernard', status: 'present', arrivalTime: '07:45', notes: '' },
-      { id: 6, student: 'Emma Petit', status: 'present', arrivalTime: '07:58', notes: '' },
-      { id: 7, student: 'Lucas Robert', status: 'excused', arrivalTime: null, notes: 'Rendez-vous médical' },
-      { id: 8, student: 'Chloé Moreau', status: 'present', arrivalTime: '07:52', notes: '' },
-    ];
-    
-    setTimeout(() => {
-      setAttendance(sampleAttendance);
-      setLoading(false);
-    }, 500);
-  }, [selectedDate, selectedClass]);
+    fetchClasses();
+  }, []);
 
-  const updateStatus = (id, newStatus) => {
-    setAttendance(attendance.map(a => 
-      a.id === id ? { ...a, status: newStatus } : a
+  useEffect(() => {
+    if (selectedClassId && selectedDate) {
+      fetchAttendance();
+    }
+  }, [selectedClassId, selectedDate]);
+
+  const fetchClasses = async () => {
+    try {
+      const response = await classAPI.getAll();
+      if (response.success && response.data.length > 0) {
+        setClasses(response.data);
+        setSelectedClassId(response.data[0].id);
+      }
+    } catch (error) {
+      console.error('Error fetching classes:', error);
+    }
+  };
+
+  const fetchAttendance = async () => {
+    try {
+      setLoading(true);
+      const response = await attendanceAPI.get(selectedClassId, selectedDate);
+      if (response.success) {
+        // Transform data for UI
+        const mappedData = response.data.map(record => ({
+          id: record.attendance_id || `temp-${record.student_id}`, // Use attendance_id if exists, else temp
+          student_id: record.student_id,
+          student: record.student_name,
+          status: record.status || 'present', // Default to present
+          notes: record.notes || '',
+          arrivalTime: record.arrival_time || '',
+          avatar: record.profile_picture_url
+        }));
+        setAttendance(mappedData);
+      }
+    } catch (error) {
+      console.error('Error fetching attendance:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateStatus = (studentId, newStatus) => {
+    setAttendance(attendance.map(a =>
+      a.student_id === studentId ? { ...a, status: newStatus } : a
     ));
+  };
+
+  const updateNotes = (studentId, newNotes) => {
+    setAttendance(attendance.map(a =>
+      a.student_id === studentId ? { ...a, notes: newNotes } : a
+    ));
+  };
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      const records = attendance.map(a => ({
+        student_id: a.student_id,
+        status: a.status,
+        notes: a.notes
+      }));
+
+      const response = await attendanceAPI.save({
+        class_id: selectedClassId,
+        date: selectedDate,
+        records
+      });
+
+      if (response.success) {
+        alert('Présences enregistrées avec succès');
+        fetchAttendance(); // Refresh to get real IDs
+      }
+    } catch (error) {
+      console.error('Error saving attendance:', error);
+      alert('Erreur lors de l\'enregistrement');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -66,8 +124,8 @@ const AttendancePage = () => {
       excused: 'Excusé',
     };
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status]}`}>
-        {labels[status]}
+      <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status] || styles.present}`}>
+        {labels[status] || labels.present}
       </span>
     );
   };
@@ -79,25 +137,17 @@ const AttendancePage = () => {
     excused: attendance.filter(a => a.status === 'excused').length,
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-4">
           <select
-            value={selectedClass}
-            onChange={(e) => setSelectedClass(e.target.value)}
+            value={selectedClassId}
+            onChange={(e) => setSelectedClassId(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           >
-            {classes.map(c => <option key={c} value={c}>{c}</option>)}
+            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2">
             <Calendar className="w-5 h-5 text-gray-500" />
@@ -114,9 +164,13 @@ const AttendancePage = () => {
             <Download className="w-4 h-4" />
             Exporter
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-            <Check className="w-4 h-4" />
-            Enregistrer
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          >
+            <Save className="w-4 h-4" />
+            {saving ? 'Enregistrement...' : 'Enregistrer'}
           </button>
         </div>
       </div>
@@ -165,80 +219,92 @@ const AttendancePage = () => {
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="p-4 border-b border-gray-200">
           <h3 className="font-semibold text-gray-800">
-            {selectedClass} - {new Date(selectedDate).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            {classes.find(c => c.id === selectedClassId)?.name || 'Classe'} - {new Date(selectedDate).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </h3>
         </div>
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Étudiant</th>
-              <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase">Statut</th>
-              <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase">Heure d'arrivée</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Notes</th>
-              <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase">Actions rapides</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {attendance.map((record) => (
-              <tr key={record.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                      <span className="font-medium text-gray-600">{record.student.charAt(0)}</span>
-                    </div>
-                    <span className="font-medium text-gray-800">{record.student}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-center">
-                  {getStatusBadge(record.status)}
-                </td>
-                <td className="px-6 py-4 text-center text-sm text-gray-600">
-                  {record.arrivalTime || '-'}
-                </td>
-                <td className="px-6 py-4">
-                  <input
-                    type="text"
-                    defaultValue={record.notes}
-                    placeholder="Ajouter une note..."
-                    className="w-full px-3 py-1 border border-transparent hover:border-gray-300 rounded focus:border-blue-500 focus:outline-none text-sm"
-                  />
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center justify-center gap-1">
-                    <button
-                      onClick={() => updateStatus(record.id, 'present')}
-                      className={`p-2 rounded-lg transition-colors ${record.status === 'present' ? 'bg-green-100 text-green-600' : 'hover:bg-gray-100 text-gray-400'}`}
-                      title="Présent"
-                    >
-                      <UserCheck className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => updateStatus(record.id, 'absent')}
-                      className={`p-2 rounded-lg transition-colors ${record.status === 'absent' ? 'bg-red-100 text-red-600' : 'hover:bg-gray-100 text-gray-400'}`}
-                      title="Absent"
-                    >
-                      <UserX className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => updateStatus(record.id, 'late')}
-                      className={`p-2 rounded-lg transition-colors ${record.status === 'late' ? 'bg-orange-100 text-orange-600' : 'hover:bg-gray-100 text-gray-400'}`}
-                      title="Retard"
-                    >
-                      <Clock className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => updateStatus(record.id, 'excused')}
-                      className={`p-2 rounded-lg transition-colors ${record.status === 'excused' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-400'}`}
-                      title="Excusé"
-                    >
-                      <AlertCircle className="w-4 h-4" />
-                    </button>
-                  </div>
-                </td>
+
+        {loading ? (
+          <div className="flex items-center justify-center p-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        ) : attendance.length === 0 ? (
+          <div className="p-12 text-center text-gray-500">
+            Aucun étudiant trouvé dans cette classe.
+          </div>
+        ) : (
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Étudiant</th>
+                <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase">Statut</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Notes</th>
+                <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase">Actions rapides</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {attendance.map((record) => (
+                <tr key={record.student_id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                        {record.avatar ? (
+                          <img src={record.avatar} alt={record.student} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="font-medium text-gray-600">{record.student.charAt(0)}</span>
+                        )}
+                      </div>
+                      <span className="font-medium text-gray-800">{record.student}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    {getStatusBadge(record.status)}
+                  </td>
+                  <td className="px-6 py-4">
+                    <input
+                      type="text"
+                      value={record.notes}
+                      onChange={(e) => updateNotes(record.student_id, e.target.value)}
+                      placeholder="Ajouter une note..."
+                      className="w-full px-3 py-1 border border-transparent hover:border-gray-300 rounded focus:border-blue-500 focus:outline-none text-sm"
+                    />
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={() => updateStatus(record.student_id, 'present')}
+                        className={`p-2 rounded-lg transition-colors ${record.status === 'present' ? 'bg-green-100 text-green-600' : 'hover:bg-gray-100 text-gray-400'}`}
+                        title="Présent"
+                      >
+                        <UserCheck className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => updateStatus(record.student_id, 'absent')}
+                        className={`p-2 rounded-lg transition-colors ${record.status === 'absent' ? 'bg-red-100 text-red-600' : 'hover:bg-gray-100 text-gray-400'}`}
+                        title="Absent"
+                      >
+                        <UserX className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => updateStatus(record.student_id, 'late')}
+                        className={`p-2 rounded-lg transition-colors ${record.status === 'late' ? 'bg-orange-100 text-orange-600' : 'hover:bg-gray-100 text-gray-400'}`}
+                        title="Retard"
+                      >
+                        <Clock className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => updateStatus(record.student_id, 'excused')}
+                        className={`p-2 rounded-lg transition-colors ${record.status === 'excused' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-400'}`}
+                        title="Excusé"
+                      >
+                        <AlertCircle className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

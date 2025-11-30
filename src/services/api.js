@@ -801,3 +801,20 @@ export const announcementAPI = {
     });
   },
 };
+
+/**
+ * Attendance APIs
+ */
+export const attendanceAPI = {
+  get: async (classId, date) => {
+    return fetchWithAuth(\/attendance?class_id=\&date=\\);
+  },
+
+  save: async (data) => {
+    return fetchWithAuth('/attendance', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+};
+
