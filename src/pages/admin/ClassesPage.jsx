@@ -15,10 +15,11 @@ import {
   Calendar,
   ChevronRight,
 } from 'lucide-react';
-import { classAPI } from '../../services/api';
+import { classAPI, userAPI } from '../../services/api';
 
 const ClassesPage = () => {
   const [classes, setClasses] = useState([]);
+  const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -32,10 +33,14 @@ const ClassesPage = () => {
   const fetchClasses = async () => {
     try {
       setLoading(true);
-      const response = await classAPI.getAll();
-      if (response.success) {
+      const [classesRes, teachersRes] = await Promise.all([
+        classAPI.getAll(),
+        userAPI.getAll({ role: 'teacher' })
+      ]);
+
+      if (classesRes.success) {
         // Map API data to frontend format
-        const mappedClasses = response.data.map(cls => ({
+        const mappedClasses = classesRes.data.map(cls => ({
           ...cls,
           level: cls.grade_level,
           year: cls.school_year,
@@ -45,6 +50,10 @@ const ClassesPage = () => {
           schedule: 'Non défini' // Not in DB yet
         }));
         setClasses(mappedClasses);
+      }
+
+      if (teachersRes.success) {
+        setTeachers(teachersRes.data);
       }
     } catch (error) {
       console.error('Error fetching classes:', error);
@@ -240,21 +249,26 @@ const ClassesPage = () => {
       {showModal && (
         <ClassModal
           classData={editingClass}
+          teachers={teachers}
           onClose={() => { setShowModal(false); setEditingClass(null); }}
           onSave={async (data) => {
             try {
               if (editingClass) {
-                await classAPI.update(editingClass.id, {
+                const payload = {
                   ...data,
                   grade_level: data.level,
-                  school_year: data.year
-                });
+                  school_year: data.year,
+                  teacher_id: data.teacher_id || null
+                };
+                await classAPI.update(editingClass.id, payload);
               } else {
-                await classAPI.create({
+                const payload = {
                   ...data,
                   grade_level: data.level,
-                  school_year: data.year
-                });
+                  school_year: data.year,
+                  teacher_id: data.teacher_id || null
+                };
+                await classAPI.create(payload);
               }
               fetchClasses();
               setShowModal(false);
@@ -270,7 +284,7 @@ const ClassesPage = () => {
   );
 };
 
-const ClassModal = ({ classData, onClose, onSave }) => {
+const ClassModal = ({ classData, teachers, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     name: classData?.name || '',
     level: classData?.level || 'Collège',
@@ -324,7 +338,21 @@ const ClassModal = ({ classData, onClose, onSave }) => {
             </div>
           </div>
 
-          {/* Note: Teacher selection would ideally fetch teachers from API. */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Professeur principal</label>
+            <select
+              value={formData.teacher_id}
+              onChange={(e) => setFormData({ ...formData, teacher_id: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Sélectionner un professeur</option>
+              {teachers.map((teacher) => (
+                <option key={teacher.id} value={teacher.id}>
+                  {teacher.full_name}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
