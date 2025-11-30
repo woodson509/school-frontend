@@ -19,13 +19,14 @@ import {
   CheckCircle,
   XCircle,
 } from 'lucide-react';
-import { courseAPI, userAPI } from '../../services/api';
+import { courseAPI, userAPI, classAPI } from '../../services/api';
 import CourseFormModal from '../../components/admin/CourseFormModal';
 
 const CoursesPage = () => {
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [teachers, setTeachers] = useState([]);
+  const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     search: '',
@@ -41,9 +42,10 @@ const CoursesPage = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [coursesRes, teachersRes] = await Promise.all([
+      const [coursesRes, teachersRes, classesRes] = await Promise.all([
         courseAPI.getAll(),
-        userAPI.getAll({ role: 'teacher' }) // Fetch teachers for the dropdown
+        userAPI.getAll({ role: 'teacher' }), // Fetch teachers for the dropdown
+        classAPI.getAll() // Fetch classes for the dropdown
       ]);
 
       if (coursesRes.success) {
@@ -52,6 +54,7 @@ const CoursesPage = () => {
           ...course,
           teacher: course.teacher_name || 'Non assigné',
           school: course.school_name || 'Non assigné',
+          className: course.class_name || 'Non assigné',
           status: course.is_active ? 'active' : 'inactive',
           students: 0, // TODO: Fetch real student count
           lessons: 0 // TODO: Fetch real lesson count
@@ -61,6 +64,10 @@ const CoursesPage = () => {
 
       if (teachersRes.success) {
         setTeachers(teachersRes.data);
+      }
+
+      if (classesRes.success) {
+        setClasses(classesRes.data);
       }
     } catch (error) {
       console.error('Error fetching courses:', error);
@@ -83,7 +90,8 @@ const CoursesPage = () => {
   const filteredCourses = courses.filter(course => {
     const matchesSearch = course.title.toLowerCase().includes(filters.search.toLowerCase()) ||
       course.code.toLowerCase().includes(filters.search.toLowerCase()) ||
-      course.teacher.toLowerCase().includes(filters.search.toLowerCase());
+      course.teacher.toLowerCase().includes(filters.search.toLowerCase()) ||
+      course.className.toLowerCase().includes(filters.search.toLowerCase());
     const matchesStatus = filters.status === 'all' || course.status === filters.status;
     return matchesSearch && matchesStatus;
   });
@@ -223,6 +231,7 @@ const CoursesPage = () => {
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Cours</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Classe</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Professeur</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Étudiants</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Statut</th>
@@ -246,6 +255,11 @@ const CoursesPage = () => {
                       </div>
                     </div>
                   </div>
+                </td>
+                <td className="px-6 py-4">
+                  <span className="text-sm text-gray-600 font-medium bg-gray-100 px-2 py-1 rounded-md">
+                    {course.className}
+                  </span>
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
@@ -309,6 +323,7 @@ const CoursesPage = () => {
         <CourseFormModal
           course={editingCourse}
           teachers={teachers}
+          classes={classes}
           onClose={() => { setShowModal(false); setEditingCourse(null); }}
           onSave={async (data) => {
             try {

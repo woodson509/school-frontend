@@ -5,11 +5,12 @@
 
 import { useState, useEffect } from 'react';
 
-const CourseFormModal = ({ course, teachers, onClose, onSave }) => {
+const CourseFormModal = ({ course, teachers, classes, onClose, onSave }) => {
     const [formData, setFormData] = useState({
         title: '',
         code: '',
         teacher_id: '',
+        class_id: '',
         credits: 3,
         status: 'draft',
         description: '',
@@ -21,6 +22,7 @@ const CourseFormModal = ({ course, teachers, onClose, onSave }) => {
                 title: course.title || '',
                 code: course.code || '',
                 teacher_id: course.teacher_id || '',
+                class_id: course.class_id || '',
                 credits: course.credits || 3,
                 status: course.status || 'draft',
                 description: course.description || '',
@@ -74,6 +76,22 @@ const CourseFormModal = ({ course, teachers, onClose, onSave }) => {
                                 max="10"
                             />
                         </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Classe</label>
+                        <select
+                            value={formData.class_id}
+                            onChange={(e) => setFormData({ ...formData, class_id: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">Sélectionner une classe</option>
+                            {classes?.map((cls) => (
+                                <option key={cls.id} value={cls.id}>
+                                    {cls.name}
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
                     <div>
