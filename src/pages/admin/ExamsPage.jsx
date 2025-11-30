@@ -20,10 +20,11 @@ import {
   Copy,
   Play,
 } from 'lucide-react';
-import { examAPI } from '../../services/api';
+import { examAPI, courseAPI } from '../../services/api';
 
 const ExamsPage = () => {
   const [exams, setExams] = useState([]);
+  const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -37,10 +38,14 @@ const ExamsPage = () => {
   const fetchExams = async () => {
     try {
       setLoading(true);
-      const response = await examAPI.getAll();
-      if (response.success) {
+      const [examsRes, coursesRes] = await Promise.all([
+        examAPI.getAll(),
+        courseAPI.getAll()
+      ]);
+
+      if (examsRes.success) {
         // Map API data to frontend format
-        const mappedExams = response.data.map(exam => ({
+        const mappedExams = examsRes.data.map(exam => ({
           ...exam,
           course: exam.course_code || exam.course_title,
           date: exam.exam_date ? new Date(exam.exam_date).toISOString().split('T')[0] : 'Non défini',
@@ -52,6 +57,10 @@ const ExamsPage = () => {
           avgScore: 0 // TODO: Fetch real average
         }));
         setExams(mappedExams);
+      }
+
+      if (coursesRes.success) {
+        setCourses(coursesRes.data);
       }
     } catch (error) {
       console.error('Error fetching exams:', error);
@@ -282,6 +291,7 @@ const ExamsPage = () => {
       {showModal && (
         <ExamModal
           exam={editingExam}
+          courses={courses}
           onClose={() => { setShowModal(false); setEditingExam(null); }}
           onSave={async (data) => {
             try {
@@ -318,7 +328,7 @@ const ExamsPage = () => {
   );
 };
 
-const ExamModal = ({ exam, onClose, onSave }) => {
+const ExamModal = ({ exam, courses, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     title: exam?.title || '',
     course_id: exam?.course_id || '',
@@ -350,15 +360,20 @@ const ExamModal = ({ exam, onClose, onSave }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">ID du Cours</label>
-            <input
-              type="text"
+            <label className="block text-sm font-medium text-gray-700 mb-1">Cours</label>
+            <select
               value={formData.course_id}
               onChange={(e) => setFormData({ ...formData, course_id: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               required
-              placeholder="ID du cours (ex: 1)"
-            />
+            >
+              <option value="">Sélectionner un cours</option>
+              {courses?.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.title} ({course.code})
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
