@@ -807,7 +807,7 @@ export const announcementAPI = {
  */
 export const attendanceAPI = {
   get: async (classId, date) => {
-    return fetchWithAuth(\/attendance?class_id=\&date=\\);
+    return fetchWithAuth(`/attendance?class_id=${classId}&date=${date}`);
   },
 
   save: async (data) => {
