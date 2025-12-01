@@ -15,13 +15,12 @@ import {
   Printer,
   Copy,
 } from 'lucide-react';
-import { scheduleAPI, classAPI, subjectAPI, userAPI } from '../../services/api';
+import { scheduleAPI, classAPI, userAPI } from '../../services/api';
 
 const SchedulesPage = () => {
   const [selectedClass, setSelectedClass] = useState('');
   const [classes, setClasses] = useState([]);
   const [schedules, setSchedules] = useState([]);
-  const [subjects, setSubjects] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState('week');
@@ -56,9 +55,8 @@ const SchedulesPage = () => {
   const fetchInitialData = async () => {
     try {
       setLoading(true);
-      const [classesRes, subjectsRes, teachersRes] = await Promise.all([
+      const [classesRes, teachersRes] = await Promise.all([
         classAPI.getAll(),
-        subjectAPI.getAll(),
         userAPI.getAll(),
       ]);
 
@@ -67,9 +65,6 @@ const SchedulesPage = () => {
         if (classesRes.data.length > 0) {
           setSelectedClass(classesRes.data[0].id);
         }
-      }
-      if (subjectsRes.success) {
-        setSubjects(subjectsRes.data);
       }
       if (teachersRes.success) {
         setTeachers(teachersRes.data.filter(u => u.role === 'teacher'));
@@ -303,6 +298,7 @@ const ScheduleModal = ({ slot, schedule, classId, subjects, teachers, onClose, o
   const [formData, setFormData] = useState({
     class_id: classId,
     subject_id: schedule?.subject_id || '',
+    subject_name: schedule?.subject_name || '',
     teacher_id: schedule?.teacher_id || '',
     day_of_week: slot?.day || schedule?.day_of_week || 'Lundi',
     start_time: schedule?.start_time?.substring(0, 5) || '',
@@ -339,15 +335,14 @@ const ScheduleModal = ({ slot, schedule, classId, subjects, teachers, onClose, o
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Matière</label>
-            <select
-              value={formData.subject_id}
-              onChange={(e) => setFormData({ ...formData, subject_id: e.target.value })}
+            <input
+              type="text"
+              value={formData.subject_name}
+              onChange={(e) => setFormData({ ...formData, subject_name: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="ex: Mathématiques, Français..."
               required
-            >
-              <option value="">Sélectionner une matière</option>
-              {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+            />
           </div>
 
           <div>
