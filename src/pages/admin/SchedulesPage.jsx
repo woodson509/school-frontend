@@ -27,6 +27,7 @@ const SchedulesPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [editingSchedule, setEditingSchedule] = useState(null);
+  const [currentDay, setCurrentDay] = useState('Lundi');
 
   const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
   const timeSlots = [
@@ -146,6 +147,8 @@ const SchedulesPage = () => {
     );
   }
 
+  const selectedClassName = classes.find(c => c.id === selectedClass)?.name || '';
+
   const handlePrint = () => {
     window.print();
   };
@@ -171,7 +174,6 @@ const SchedulesPage = () => {
     link.click();
   };
 
-  const [currentDay, setCurrentDay] = useState(days[0]);
   const displayedDays = view === 'week' ? days : [currentDay];
 
   return (
