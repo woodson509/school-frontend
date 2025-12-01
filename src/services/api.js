@@ -671,6 +671,10 @@ export default {
   enrollmentAPI,
   assignmentAPI,
   announcementAPI,
+  paymentAPI,
+  scheduleAPI,
+  curriculumAPI,
+  attendanceAPI,
 };
 
 /**
@@ -870,4 +874,3 @@ export const scheduleAPI = {
     });
   },
 };
-
