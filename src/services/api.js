@@ -844,3 +844,30 @@ export const curriculumAPI = {
   },
 };
 
+/**
+ * Schedule APIs
+ */
+export const scheduleAPI = {
+  getAll: async (class_id) => {
+    const params = class_id ? `?class_id=${class_id}` : '';
+    return fetchWithAuth(`/schedules${params}`);
+  },
+  create: async (data) => {
+    return fetchWithAuth('/schedules', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  update: async (id, data) => {
+    return fetchWithAuth(`/schedules/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+  delete: async (id) => {
+    return fetchWithAuth(`/schedules/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
