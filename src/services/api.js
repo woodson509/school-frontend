@@ -874,3 +874,57 @@ export const scheduleAPI = {
     });
   },
 };
+
+/**
+ * Payment APIs
+ */
+export const paymentAPI = {
+  getStudentFees: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/student-fees${queryString ? `?${queryString}` : ''}`);
+  },
+
+  assignFee: async (data) => {
+    return fetchWithAuth('/student-fees', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  recordPayment: async (data) => {
+    return fetchWithAuth('/payments', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getStats: async () => {
+    return fetchWithAuth('/payments/stats');
+  },
+
+  getFees: async () => {
+    return fetchWithAuth('/fees');
+  },
+};
+
+export default {
+  authAPI,
+  courseAPI,
+  examAPI,
+  agentAPI,
+  dashboardAPI,
+  schoolAPI,
+  userAPI,
+  classAPI,
+  subjectAPI,
+  gradeAPI,
+  offlineStorage,
+  lessonAPI,
+  enrollmentAPI,
+  assignmentAPI,
+  announcementAPI,
+  attendanceAPI,
+  curriculumAPI,
+  scheduleAPI,
+  paymentAPI,
+};
