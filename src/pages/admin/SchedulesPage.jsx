@@ -146,12 +146,38 @@ const SchedulesPage = () => {
     );
   }
 
-  const selectedClassName = classes.find(c => c.id === selectedClass)?.name || '';
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleExport = () => {
+    const headers = ['Jour', 'Heure début', 'Heure fin', 'Matière', 'Professeur', 'Salle'];
+    const csvContent = [
+      headers.join(','),
+      ...schedules.map(s => [
+        s.day_of_week,
+        s.start_time,
+        s.end_time,
+        `"${s.subject_name}"`,
+        `"${s.teacher_name}"`,
+        `"${s.room}"`
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `emploi_du_temps_${selectedClassName}.csv`;
+    link.click();
+  };
+
+  const [currentDay, setCurrentDay] = useState(days[0]);
+  const displayedDays = view === 'week' ? days : [currentDay];
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 print:hidden">
         <div className="flex items-center gap-4">
           <select
             value={selectedClass}
@@ -176,13 +202,28 @@ const SchedulesPage = () => {
               Jour
             </button>
           </div>
+          {view === 'day' && (
+            <select
+              value={currentDay}
+              onChange={(e) => setCurrentDay(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              {days.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+          )}
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+          <button
+            onClick={handlePrint}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
             <Printer className="w-4 h-4" />
             Imprimer
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
             <Download className="w-4 h-4" />
             Exporter
           </button>
@@ -201,20 +242,20 @@ const SchedulesPage = () => {
       </div>
 
       {/* Schedule Grid */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-200 bg-gray-50">
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden print:shadow-none">
+        <div className="p-4 border-b border-gray-200 bg-gray-50 print:bg-white print:border-none">
           <h3 className="font-semibold text-gray-800">Emploi du temps - {selectedClassName}</h3>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px]">
+          <table className="w-full min-w-[900px] print:min-w-0">
             <thead>
-              <tr className="bg-gray-50">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-28">
+              <tr className="bg-gray-50 print:bg-white">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-28 border print:border-gray-300">
                   Horaire
                 </th>
-                {days.map(day => (
-                  <th key={day} className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
+                {displayedDays.map(day => (
+                  <th key={day} className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase border print:border-gray-300">
                     {day}
                   </th>
                 ))}
@@ -222,11 +263,11 @@ const SchedulesPage = () => {
             </thead>
             <tbody>
               {timeSlots.map((slot) => (
-                <tr key={slot} className={isBreak(slot) ? 'bg-gray-100' : ''}>
-                  <td className="px-4 py-2 text-sm text-gray-600 font-medium border-r border-gray-200">
+                <tr key={slot} className={isBreak(slot) ? 'bg-gray-100 print:bg-gray-100' : ''}>
+                  <td className="px-4 py-2 text-sm text-gray-600 font-medium border-r border-gray-200 border print:border-gray-300">
                     {slot}
                   </td>
-                  {days.map(day => {
+                  {displayedDays.map(day => {
                     const schedule = getScheduleByDayAndSlot(day, slot);
                     const isBreakSlot = isBreak(slot);
 
@@ -234,7 +275,7 @@ const SchedulesPage = () => {
                       <td
                         key={`${day}-${slot}`}
                         onClick={() => handleSlotClick(day, slot, schedule)}
-                        className={`px-2 py-1 border border-gray-100 ${isBreakSlot ? '' : 'cursor-pointer hover:bg-gray-50'
+                        className={`px-2 py-1 border border-gray-100 print:border-gray-300 ${isBreakSlot ? '' : 'cursor-pointer hover:bg-gray-50'
                           }`}
                       >
                         {isBreakSlot ? (
@@ -243,7 +284,7 @@ const SchedulesPage = () => {
                           </div>
                         ) : schedule ? (
                           <div
-                            className="p-2 rounded-lg text-white text-xs relative group"
+                            className="p-2 rounded-lg text-white text-xs relative group print:text-black print:border print:border-gray-300"
                             style={{ backgroundColor: schedule.color || '#3B82F6' }}
                           >
                             <p className="font-semibold">{schedule.subject_name}</p>
@@ -254,13 +295,13 @@ const SchedulesPage = () => {
                                 e.stopPropagation();
                                 handleDelete(schedule.id);
                               }}
-                              className="absolute top-1 right-1 p-1 bg-white/20 rounded hover:bg-white/30 opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="absolute top-1 right-1 p-1 bg-white/20 rounded hover:bg-white/30 opacity-0 group-hover:opacity-100 transition-opacity print:hidden"
                             >
                               <Trash2 className="w-3 h-3" />
                             </button>
                           </div>
                         ) : (
-                          <div className="h-16 flex items-center justify-center">
+                          <div className="h-16 flex items-center justify-center print:hidden">
                             <Plus className="w-4 h-4 text-gray-300" />
                           </div>
                         )}
