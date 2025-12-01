@@ -655,27 +655,7 @@ export const offlineStorage = {
   },
 };
 
-export default {
-  authAPI,
-  courseAPI,
-  examAPI,
-  agentAPI,
-  dashboardAPI,
-  schoolAPI,
-  userAPI,
-  classAPI,
-  subjectAPI,
-  gradeAPI,
-  offlineStorage,
-  lessonAPI,
-  enrollmentAPI,
-  assignmentAPI,
-  announcementAPI,
-  paymentAPI,
-  scheduleAPI,
-  curriculumAPI,
-  attendanceAPI,
-};
+
 
 /**
  * Lesson APIs
