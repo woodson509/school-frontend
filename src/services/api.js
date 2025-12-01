@@ -818,3 +818,29 @@ export const attendanceAPI = {
   },
 };
 
+/**
+ * Curriculum APIs
+ */
+export const curriculumAPI = {
+  getAll: async () => {
+    return fetchWithAuth('/curricula');
+  },
+  create: async (data) => {
+    return fetchWithAuth('/curricula', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  update: async (id, data) => {
+    return fetchWithAuth(`/curricula/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+  delete: async (id) => {
+    return fetchWithAuth(`/curricula/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
