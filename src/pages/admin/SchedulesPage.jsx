@@ -280,7 +280,6 @@ const SchedulesPage = () => {
           slot={selectedSlot}
           schedule={editingSchedule}
           classId={selectedClass}
-          subjects={subjects}
           teachers={teachers}
           onClose={() => {
             setShowModal(false);
