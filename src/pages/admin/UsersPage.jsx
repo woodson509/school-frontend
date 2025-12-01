@@ -94,7 +94,15 @@ const UsersPage = () => {
             setEditingUser(null);
         } catch (error) {
             console.error('Error saving user:', error);
-            alert('Erreur lors de l\'enregistrement: ' + error.message);
+            let errorMessage = 'Erreur lors de l\'enregistrement';
+
+            if (error.message?.includes('User already exists') || error.response?.data?.message?.includes('User already exists')) {
+                errorMessage = 'Cet email est déjà utilisé par un autre utilisateur.';
+            } else if (error.message) {
+                errorMessage = `Erreur: ${error.message}`;
+            }
+
+            alert(errorMessage);
         }
     };
 
