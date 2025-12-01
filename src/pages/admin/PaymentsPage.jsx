@@ -1,6 +1,6 @@
 /**
  * Payments Management Page
- * Manage student fees and payments
+ * Manage student fees, payments, and teacher salaries
  */
 
 import { useState, useEffect } from 'react';
@@ -19,19 +19,33 @@ import {
   Eye,
   Landmark,
   ArrowRight,
-  ShieldCheck
+  ShieldCheck,
+  Users,
+  Briefcase,
+  Trash2,
+  Edit2
 } from 'lucide-react';
 import { paymentAPI, userAPI } from '../../services/api';
 
 const PaymentsPage = () => {
+  const [activeTab, setActiveTab] = useState('students'); // 'students', 'teachers', 'fees'
   const [payments, setPayments] = useState([]);
+  const [teacherPayments, setTeacherPayments] = useState([]);
+  const [fees, setFees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+
+  // Modals
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showTeacherPaymentModal, setShowTeacherPaymentModal] = useState(false);
+  const [showFeeModal, setShowFeeModal] = useState(false);
   const [showBankModal, setShowBankModal] = useState(false);
+  const [selectedFee, setSelectedFee] = useState(null);
+
   const [students, setStudents] = useState([]);
-  const [fees, setFees] = useState([]);
+  const [teachers, setTeachers] = useState([]);
+
   const [stats, setStats] = useState({
     total_expected: 0,
     total_received: 0,
@@ -45,22 +59,37 @@ const PaymentsPage = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [activeTab]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [paymentsRes, statsRes, studentsRes, feesRes] = await Promise.all([
-        paymentAPI.getStudentFees(),
-        paymentAPI.getStats(),
+
+      // Always fetch common data
+      const [studentsRes, teachersRes] = await Promise.all([
         userAPI.getAll({ role: 'student' }),
-        paymentAPI.getFees()
+        userAPI.getAll({ role: 'teacher' })
       ]);
 
-      if (paymentsRes.success) setPayments(paymentsRes.data);
-      if (statsRes.success) setStats(statsRes.data);
       if (studentsRes.success) setStudents(studentsRes.data);
-      if (feesRes.success) setFees(feesRes.data);
+      if (teachersRes.success) setTeachers(teachersRes.data);
+
+      if (activeTab === 'students') {
+        const [paymentsRes, statsRes, feesRes] = await Promise.all([
+          paymentAPI.getStudentFees(),
+          paymentAPI.getStats(),
+          paymentAPI.getFees()
+        ]);
+        if (paymentsRes.success) setPayments(paymentsRes.data);
+        if (statsRes.success) setStats(statsRes.data);
+        if (feesRes.success) setFees(feesRes.data);
+      } else if (activeTab === 'teachers') {
+        const res = await paymentAPI.getTeacherPayments();
+        if (res.success) setTeacherPayments(res.data);
+      } else if (activeTab === 'fees') {
+        const res = await paymentAPI.getFees();
+        if (res.success) setFees(res.data);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -70,7 +99,6 @@ const PaymentsPage = () => {
 
   const handleConnectBank = () => {
     setConnectingBank(true);
-    // Simulate bank connection process
     setTimeout(() => {
       setBankConnected(true);
       setConnectingBank(false);
@@ -79,11 +107,20 @@ const PaymentsPage = () => {
     }, 2000);
   };
 
-  const filteredPayments = payments.filter(payment => {
-    const matchesSearch = payment.student_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const handleDeleteFee = async (id) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce type de frais ?')) {
+      try {
+        await paymentAPI.deleteFee(id);
+        fetchData();
+      } catch (error) {
+        alert('Impossible de supprimer ce frais car il est utilisé.');
+      }
+    }
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('fr-HT', { style: 'currency', currency: 'HTG' }).format(amount).replace('HTG', 'G');
+  };
 
   const getStatusBadge = (status) => {
     const styles = {
@@ -105,7 +142,7 @@ const PaymentsPage = () => {
     );
   };
 
-  if (loading) {
+  if (loading && !payments.length && !fees.length && !teacherPayments.length) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -115,31 +152,32 @@ const PaymentsPage = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header & Tabs */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher un étudiant..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 w-64"
-            />
-          </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+          <button
+            onClick={() => setActiveTab('students')}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'students' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'
+              }`}
           >
-            <option value="all">Tous les statuts</option>
-            <option value="paid">Payé</option>
-            <option value="partial">Partiel</option>
-            <option value="pending">En attente</option>
-            <option value="overdue">En retard</option>
-          </select>
+            Paiements Étudiants
+          </button>
+          <button
+            onClick={() => setActiveTab('teachers')}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'teachers' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'
+              }`}
+          >
+            Salaires Professeurs
+          </button>
+          <button
+            onClick={() => setActiveTab('fees')}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'fees' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'
+              }`}
+          >
+            Types de Frais
+          </button>
         </div>
+
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowBankModal(true)}
@@ -151,157 +189,260 @@ const PaymentsPage = () => {
             <Landmark className="w-4 h-4" />
             {bankConnected ? 'Banque Connectée' : 'Connecter Banque'}
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-            <Download className="w-4 h-4" />
-            Exporter
-          </button>
-          <button
-            onClick={() => setShowPaymentModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4" />
-            Enregistrer paiement
-          </button>
+
+          {activeTab === 'students' && (
+            <button
+              onClick={() => setShowPaymentModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4" />
+              Nouveau Paiement
+            </button>
+          )}
+
+          {activeTab === 'teachers' && (
+            <button
+              onClick={() => setShowTeacherPaymentModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4" />
+              Payer Salaire
+            </button>
+          )}
+
+          {activeTab === 'fees' && (
+            <button
+              onClick={() => { setSelectedFee(null); setShowFeeModal(true); }}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4" />
+              Ajouter Type de Frais
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl p-6 shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-blue-600" />
+      {/* Content based on Active Tab */}
+      {activeTab === 'students' && (
+        <>
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-xl p-6 shadow-sm">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <DollarSign className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-800">{formatCurrency(stats.total_expected)}</p>
+                  <p className="text-sm text-gray-500">Total attendu</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-800">${Number(stats.total_expected).toLocaleString()}</p>
-              <p className="text-sm text-gray-500">Total attendu</p>
+            <div className="bg-white rounded-xl p-6 shadow-sm">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-800">{formatCurrency(stats.total_received)}</p>
+                  <p className="text-sm text-gray-500">Total reçu</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl p-6 shadow-sm">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-lg bg-orange-100 flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-orange-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-800">{stats.pending_count}</p>
+                  <p className="text-sm text-gray-500">En attente</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl p-6 shadow-sm">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-800">{stats.overdue_count}</p>
+                  <p className="text-sm text-gray-500">En retard</p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="bg-white rounded-xl p-6 shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-800">${Number(stats.total_received).toLocaleString()}</p>
-              <p className="text-sm text-gray-500">Total reçu</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl p-6 shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-orange-100 flex items-center justify-center">
-              <Clock className="w-6 h-6 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-800">{stats.pending_count}</p>
-              <p className="text-sm text-gray-500">En attente</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl p-6 shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center">
-              <AlertCircle className="w-6 h-6 text-red-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-800">{stats.overdue_count}</p>
-              <p className="text-sm text-gray-500">En retard</p>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Progress Bar */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700">Progression des paiements</span>
-          <span className="text-sm text-gray-500">
-            {stats.total_expected > 0 ? Math.round((stats.total_received / stats.total_expected) * 100) : 0}%
-          </span>
-        </div>
-        <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-blue-500 to-green-500 rounded-full transition-all"
-            style={{ width: `${stats.total_expected > 0 ? (stats.total_received / stats.total_expected) * 100 : 0}%` }}
-          />
-        </div>
-        <p className="text-sm text-gray-500 mt-2">
-          ${Number(stats.total_received).toLocaleString()} reçus sur ${Number(stats.total_expected).toLocaleString()} attendus
-        </p>
-      </div>
+          {/* Filters */}
+          <div className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Rechercher un étudiant..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 w-full"
+              />
+            </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">Tous les statuts</option>
+              <option value="paid">Payé</option>
+              <option value="partial">Partiel</option>
+              <option value="pending">En attente</option>
+              <option value="overdue">En retard</option>
+            </select>
+          </div>
 
-      {/* Payments Table */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Étudiant</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Classe</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Montant</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Payé</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Statut</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
-              <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {filteredPayments.length > 0 ? (
-              filteredPayments.map((payment) => (
-                <tr key={payment.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                        <span className="text-sm font-medium text-gray-600">
-                          {payment.student_name.charAt(0)}
+          {/* Table */}
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Étudiant</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Classe</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Montant</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Payé</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Statut</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {payments
+                  .filter(p =>
+                    (statusFilter === 'all' || p.status === statusFilter) &&
+                    p.student_name.toLowerCase().includes(searchTerm.toLowerCase())
+                  )
+                  .map((payment) => (
+                    <tr key={payment.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                            <span className="text-sm font-medium text-gray-600">
+                              {payment.student_name.charAt(0)}
+                            </span>
+                          </div>
+                          <span className="font-medium text-gray-800">{payment.student_name}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{payment.class_name || '-'}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{payment.fee_type || 'Frais divers'}</td>
+                      <td className="px-6 py-4 font-medium text-gray-800">{formatCurrency(payment.amount)}</td>
+                      <td className="px-6 py-4">
+                        <span className={`font-medium ${Number(payment.paid_amount) >= Number(payment.amount) ? 'text-green-600' : 'text-orange-600'}`}>
+                          {formatCurrency(payment.paid_amount)}
                         </span>
-                      </div>
-                      <span className="font-medium text-gray-800">{payment.student_name}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{payment.class_name || '-'}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{payment.fee_type || 'Frais divers'}</td>
-                  <td className="px-6 py-4 font-medium text-gray-800">${Number(payment.amount).toLocaleString()}</td>
-                  <td className="px-6 py-4">
-                    <span className={`font-medium ${Number(payment.paid_amount) >= Number(payment.amount) ? 'text-green-600' : 'text-orange-600'}`}>
-                      ${Number(payment.paid_amount).toLocaleString()}
-                    </span>
-                  </td>
+                      </td>
+                      <td className="px-6 py-4">{getStatusBadge(payment.status)}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {new Date(payment.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button className="p-2 hover:bg-gray-100 rounded-lg" title="Voir détails">
+                            <Eye className="w-4 h-4 text-gray-600" />
+                          </button>
+                          <button className="p-2 hover:bg-gray-100 rounded-lg" title="Reçu">
+                            <Receipt className="w-4 h-4 text-blue-600" />
+                          </button>
+                          {payment.status !== 'paid' && (
+                            <button className="p-2 hover:bg-gray-100 rounded-lg" title="Enregistrer paiement">
+                              <CreditCard className="w-4 h-4 text-green-600" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {activeTab === 'teachers' && (
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Professeur</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Période</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Montant</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Méthode</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Statut</th>
+                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {teacherPayments.map((payment) => (
+                <tr key={payment.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 font-medium text-gray-800">{payment.teacher_name}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{payment.period_month} {payment.period_year}</td>
+                  <td className="px-6 py-4 font-medium text-gray-800">{formatCurrency(payment.amount)}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600 capitalize">{payment.payment_method}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{new Date(payment.payment_date).toLocaleDateString()}</td>
                   <td className="px-6 py-4">{getStatusBadge(payment.status)}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {new Date(payment.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <button className="p-2 hover:bg-gray-100 rounded-lg" title="Voir détails">
-                        <Eye className="w-4 h-4 text-gray-600" />
-                      </button>
-                      <button className="p-2 hover:bg-gray-100 rounded-lg" title="Reçu">
-                        <Receipt className="w-4 h-4 text-blue-600" />
-                      </button>
-                      {payment.status !== 'paid' && (
-                        <button className="p-2 hover:bg-gray-100 rounded-lg" title="Enregistrer paiement">
-                          <CreditCard className="w-4 h-4 text-green-600" />
-                        </button>
-                      )}
-                    </div>
+                  <td className="px-6 py-4 text-right">
+                    <button className="p-2 hover:bg-gray-100 rounded-lg text-blue-600">
+                      <Receipt className="w-4 h-4" />
+                    </button>
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
-                  Aucun paiement trouvé
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              ))}
+              {teacherPayments.length === 0 && (
+                <tr>
+                  <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                    Aucun paiement de salaire enregistré
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-      {/* Payment Modal */}
+      {activeTab === 'fees' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {fees.map((fee) => (
+            <div key={fee.id} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
+              <div className="flex justify-between items-start mb-4">
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <Briefcase className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setSelectedFee(fee); setShowFeeModal(true); }}
+                    className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteFee(fee.id)}
+                    className="p-2 hover:bg-red-50 rounded-lg text-red-600"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              <h3 className="text-lg font-bold text-gray-800 mb-1">{fee.name}</h3>
+              <p className="text-sm text-gray-500 mb-4">{fee.description || 'Aucune description'}</p>
+              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                <span className="text-sm text-gray-500 capitalize">{fee.type}</span>
+                <span className="text-xl font-bold text-blue-600">{formatCurrency(fee.amount)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modals */}
       {showPaymentModal && (
         <PaymentModal
           students={students}
@@ -314,7 +455,29 @@ const PaymentsPage = () => {
         />
       )}
 
-      {/* Bank Connection Modal */}
+      {showTeacherPaymentModal && (
+        <TeacherPaymentModal
+          teachers={teachers}
+          onClose={() => setShowTeacherPaymentModal(false)}
+          onSuccess={() => {
+            setShowTeacherPaymentModal(false);
+            fetchData();
+          }}
+        />
+      )}
+
+      {showFeeModal && (
+        <FeeModal
+          fee={selectedFee}
+          onClose={() => setShowFeeModal(false)}
+          onSuccess={() => {
+            setShowFeeModal(false);
+            fetchData();
+          }}
+        />
+      )}
+
+      {/* Bank Connection Modal (Same as before) */}
       {showBankModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
@@ -350,39 +513,13 @@ const PaymentsPage = () => {
                     </div>
                     <ArrowRight className="w-5 h-5 text-gray-400" />
                   </button>
-
-                  <button
-                    onClick={handleConnectBank}
-                    className="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
-                        U
-                      </div>
-                      <span className="font-medium text-gray-700">Unibank</span>
-                    </div>
-                    <ArrowRight className="w-5 h-5 text-gray-400" />
-                  </button>
-
-                  <button
-                    onClick={handleConnectBank}
-                    className="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">
-                        B
-                      </div>
-                      <span className="font-medium text-gray-700">BUH</span>
-                    </div>
-                    <ArrowRight className="w-5 h-5 text-gray-400" />
-                  </button>
+                  {/* Other banks... */}
                 </div>
               </div>
             ) : (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                 <p className="text-gray-600 font-medium">Connexion sécurisée à la banque...</p>
-                <p className="text-sm text-gray-400 mt-2">Veuillez patienter quelques instants</p>
               </div>
             )}
           </div>
@@ -392,6 +529,7 @@ const PaymentsPage = () => {
   );
 };
 
+// Sub-components for Modals
 const PaymentModal = ({ students, fees, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     student_id: '',
@@ -408,7 +546,6 @@ const PaymentModal = ({ students, fees, onClose, onSuccess }) => {
       await paymentAPI.assignFee(formData);
       onSuccess();
     } catch (error) {
-      console.error('Error assigning fee:', error);
       alert('Erreur lors de l\'enregistrement');
     } finally {
       setLoading(false);
@@ -450,12 +587,12 @@ const PaymentModal = ({ students, fees, onClose, onSuccess }) => {
             >
               <option value="">Sélectionner un type (Optionnel)</option>
               {fees.map(f => (
-                <option key={f.id} value={f.id}>{f.name} - ${f.amount}</option>
+                <option key={f.id} value={f.id}>{f.name} - {f.amount} G</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Montant</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Montant (G)</label>
             <input
               type="number"
               value={formData.amount}
@@ -465,30 +602,205 @@ const PaymentModal = ({ students, fees, onClose, onSuccess }) => {
               required
             />
           </div>
+          <div className="flex gap-3 pt-4">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg">Annuler</button>
+            <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg" disabled={loading}>Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const TeacherPaymentModal = ({ teachers, onClose, onSuccess }) => {
+  const [formData, setFormData] = useState({
+    teacher_id: '',
+    amount: '',
+    payment_method: 'cash',
+    period_month: new Date().toLocaleString('default', { month: 'long' }),
+    period_year: new Date().getFullYear(),
+    notes: ''
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await paymentAPI.recordTeacherPayment(formData);
+      onSuccess();
+    } catch (error) {
+      alert('Erreur lors du paiement');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+        <h3 className="text-xl font-bold text-gray-800 mb-6">Payer Salaire Professeur</h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date d'échéance</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Professeur</label>
+            <select
+              value={formData.teacher_id}
+              onChange={(e) => setFormData({ ...formData, teacher_id: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              required
+            >
+              <option value="">Sélectionner un professeur</option>
+              {teachers.map(t => (
+                <option key={t.id} value={t.id}>{t.full_name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Mois</label>
+              <select
+                value={formData.period_month}
+                onChange={(e) => setFormData({ ...formData, period_month: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              >
+                {['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'].map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Année</label>
+              <input
+                type="number"
+                value={formData.period_year}
+                onChange={(e) => setFormData({ ...formData, period_year: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Montant (G)</label>
             <input
-              type="date"
-              value={formData.due_date}
-              onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              type="number"
+              value={formData.amount}
+              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Méthode</label>
+            <select
+              value={formData.payment_method}
+              onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            >
+              <option value="cash">Espèces</option>
+              <option value="check">Chèque</option>
+              <option value="transfer">Virement</option>
+              <option value="mobile_money">MonCash / Natcash</option>
+            </select>
+          </div>
+          <div className="flex gap-3 pt-4">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg">Annuler</button>
+            <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg" disabled={loading}>Payer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const FeeModal = ({ fee, onClose, onSuccess }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    type: 'tuition',
+    amount: '',
+    description: ''
+  });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (fee) {
+      setFormData({
+        name: fee.name,
+        type: fee.type,
+        amount: fee.amount,
+        description: fee.description || ''
+      });
+    }
+  }, [fee]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      if (fee) {
+        await paymentAPI.updateFee(fee.id, formData);
+      } else {
+        await paymentAPI.createFee(formData);
+      }
+      onSuccess();
+    } catch (error) {
+      alert('Erreur lors de l\'enregistrement');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+        <h3 className="text-xl font-bold text-gray-800 mb-6">{fee ? 'Modifier' : 'Nouveau'} Type de Frais</h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              placeholder="Ex: Scolarité Octobre"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+            <select
+              value={formData.type}
+              onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            >
+              <option value="tuition">Scolarité</option>
+              <option value="canteen">Cantine</option>
+              <option value="transport">Transport</option>
+              <option value="exam">Examen</option>
+              <option value="material">Matériel</option>
+              <option value="other">Autre</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Montant (G)</label>
+            <input
+              type="number"
+              value={formData.amount}
+              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              rows="3"
             />
           </div>
           <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              disabled={loading}
-            >
-              {loading ? 'Enregistrement...' : 'Enregistrer'}
-            </button>
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg">Annuler</button>
+            <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg" disabled={loading}>Enregistrer</button>
           </div>
         </form>
       </div>

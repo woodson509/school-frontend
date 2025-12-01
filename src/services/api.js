@@ -885,6 +885,38 @@ export const paymentAPI = {
   getFees: async () => {
     return fetchWithAuth('/fees');
   },
+
+  createFee: async (data) => {
+    return fetchWithAuth('/fees', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateFee: async (id, data) => {
+    return fetchWithAuth(`/fees/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteFee: async (id) => {
+    return fetchWithAuth(`/fees/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getTeacherPayments: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/teacher-payments${queryString ? `?${queryString}` : ''}`);
+  },
+
+  recordTeacherPayment: async (data) => {
+    return fetchWithAuth('/teacher-payments', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
 };
 
 export default {
