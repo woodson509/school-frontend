@@ -41,7 +41,9 @@ const PaymentsPage = () => {
   const [showTeacherPaymentModal, setShowTeacherPaymentModal] = useState(false);
   const [showFeeModal, setShowFeeModal] = useState(false);
   const [showBankModal, setShowBankModal] = useState(false);
+  const [showRecordPaymentModal, setShowRecordPaymentModal] = useState(false);
   const [selectedFee, setSelectedFee] = useState(null);
+  const [selectedStudentFee, setSelectedStudentFee] = useState(null);
 
   const [students, setStudents] = useState([]);
   const [teachers, setTeachers] = useState([]);
@@ -182,8 +184,8 @@ const PaymentsPage = () => {
           <button
             onClick={() => setShowBankModal(true)}
             className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors ${bankConnected
-                ? 'bg-green-50 border-green-200 text-green-700'
-                : 'border-gray-300 hover:bg-gray-50'
+              ? 'bg-green-50 border-green-200 text-green-700'
+              : 'border-gray-300 hover:bg-gray-50'
               }`}
           >
             <Landmark className="w-4 h-4" />
@@ -352,7 +354,14 @@ const PaymentsPage = () => {
                             <Receipt className="w-4 h-4 text-blue-600" />
                           </button>
                           {payment.status !== 'paid' && (
-                            <button className="p-2 hover:bg-gray-100 rounded-lg" title="Enregistrer paiement">
+                            <button
+                              onClick={() => {
+                                setSelectedStudentFee(payment);
+                                setShowRecordPaymentModal(true);
+                              }}
+                              className="p-2 hover:bg-green-50 rounded-lg transition-colors"
+                              title="Enregistrer paiement"
+                            >
                               <CreditCard className="w-4 h-4 text-green-600" />
                             </button>
                           )}
@@ -472,6 +481,21 @@ const PaymentsPage = () => {
           onClose={() => setShowFeeModal(false)}
           onSuccess={() => {
             setShowFeeModal(false);
+            fetchData();
+          }}
+        />
+      )}
+
+      {showRecordPaymentModal && selectedStudentFee && (
+        <RecordPaymentModal
+          studentFee={selectedStudentFee}
+          onClose={() => {
+            setShowRecordPaymentModal(false);
+            setSelectedStudentFee(null);
+          }}
+          onSuccess={() => {
+            setShowRecordPaymentModal(false);
+            setSelectedStudentFee(null);
             fetchData();
           }}
         />
@@ -801,6 +825,140 @@ const FeeModal = ({ fee, onClose, onSuccess }) => {
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg">Annuler</button>
             <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg" disabled={loading}>Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const RecordPaymentModal = ({ studentFee, onClose, onSuccess }) => {
+  const remainingAmount = Number(studentFee.amount) - Number(studentFee.paid_amount);
+
+  const [formData, setFormData] = useState({
+    student_fee_id: studentFee.id,
+    amount: remainingAmount.toString(),
+    payment_method: 'cash',
+    reference: '',
+    notes: ''
+  });
+  const [loading, setLoading] = useState(false);
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('fr-HT', { style: 'currency', currency: 'HTG' }).format(amount).replace('HTG', 'G');
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await paymentAPI.recordPayment(formData);
+      onSuccess();
+    } catch (error) {
+      alert('Erreur lors de l\'enregistrement du paiement');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+        <h3 className="text-xl font-bold text-gray-800 mb-6">Enregistrer un Paiement</h3>
+
+        {/* Student Fee Info */}
+        <div className="bg-gray-50 rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-600">Étudiant:</span>
+            <span className="font-medium text-gray-800">{studentFee.student_name}</span>
+          </div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-600">Type de frais:</span>
+            <span className="font-medium text-gray-800">{studentFee.fee_type || 'Frais divers'}</span>
+          </div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-600">Montant total:</span>
+            <span className="font-medium text-gray-800">{formatCurrency(studentFee.amount)}</span>
+          </div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-600">Déjà payé:</span>
+            <span className="font-medium text-green-600">{formatCurrency(studentFee.paid_amount)}</span>
+          </div>
+          <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+            <span className="text-sm font-semibold text-gray-700">Reste à payer:</span>
+            <span className="text-lg font-bold text-orange-600">{formatCurrency(remainingAmount)}</span>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Montant reçu (G)</label>
+            <input
+              type="number"
+              value={formData.amount}
+              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="0.00"
+              max={remainingAmount}
+              step="0.01"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">Maximum: {formatCurrency(remainingAmount)}</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Méthode de paiement</label>
+            <select
+              value={formData.payment_method}
+              onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="cash">Espèces</option>
+              <option value="check">Chèque</option>
+              <option value="transfer">Virement bancaire</option>
+              <option value="mobile_money">MonCash / Natcash</option>
+              <option value="other">Autre</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Référence (Optionnel)</label>
+            <input
+              type="text"
+              value={formData.reference}
+              onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Ex: Numéro de chèque, transaction ID..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes (Optionnel)</label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              rows="2"
+              placeholder="Remarques additionnelles..."
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              disabled={loading}
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+              disabled={loading}
+            >
+              {loading ? 'Enregistrement...' : 'Enregistrer Paiement'}
+            </button>
           </div>
         </form>
       </div>
