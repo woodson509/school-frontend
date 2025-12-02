@@ -1,345 +1,449 @@
 /**
- * Settings Page
- * System configuration and preferences
+ * School Settings Page
+ * Manage grading scales, report periods, and subject coefficients
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Settings,
-  User,
-  Bell,
-  Lock,
-  Globe,
-  Palette,
-  Mail,
-  Database,
-  Shield,
+  Calendar,
+  Award,
+  BookOpen,
   Save,
-  Upload,
+  Plus,
+  Trash2,
+  Edit2,
+  Check,
+  X
 } from 'lucide-react';
+import { settingsAPI, classAPI, subjectAPI } from '../../services/api';
 
 const SettingsPage = () => {
-  const [activeTab, setActiveTab] = useState('general');
-  const [settings, setSettings] = useState({
-    schoolName: 'École Saint-Jean',
-    schoolEmail: 'contact@ecole-saintjean.com',
-    schoolPhone: '+509 1234-5678',
-    schoolAddress: 'Port-au-Prince, Haïti',
-    language: 'fr',
-    timezone: 'America/Port-au-Prince',
-    dateFormat: 'DD/MM/YYYY',
-    emailNotifications: true,
-    pushNotifications: true,
-    smsNotifications: false,
-    twoFactorAuth: false,
-    sessionTimeout: 30,
-    primaryColor: '#2563eb',
-    logo: null,
-  });
+  const [activeTab, setActiveTab] = useState('periods');
+  const [loading, setLoading] = useState(true);
 
-  const tabs = [
-    { id: 'general', label: 'Général', icon: Settings },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'security', label: 'Sécurité', icon: Lock },
-    { id: 'appearance', label: 'Apparence', icon: Palette },
-    { id: 'email', label: 'Email', icon: Mail },
-    { id: 'backup', label: 'Sauvegarde', icon: Database },
-  ];
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-gray-800">Configuration de l'École</h1>
 
-  const handleChange = (key, value) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+      {/* Tabs */}
+      <div className="flex space-x-4 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('periods')}
+          className={`pb-2 px-4 font-medium text-sm transition-colors ${activeTab === 'periods'
+              ? 'border-b-2 border-blue-600 text-blue-600'
+              : 'text-gray-500 hover:text-gray-700'
+            }`}
+        >
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            Périodes d'Évaluation
+          </div>
+        </button>
+        <button
+          onClick={() => setActiveTab('scales')}
+          className={`pb-2 px-4 font-medium text-sm transition-colors ${activeTab === 'scales'
+              ? 'border-b-2 border-blue-600 text-blue-600'
+              : 'text-gray-500 hover:text-gray-700'
+            }`}
+        >
+          <div className="flex items-center gap-2">
+            <Award className="w-4 h-4" />
+            Échelles de Notation
+          </div>
+        </button>
+        <button
+          onClick={() => setActiveTab('coefficients')}
+          className={`pb-2 px-4 font-medium text-sm transition-colors ${activeTab === 'coefficients'
+              ? 'border-b-2 border-blue-600 text-blue-600'
+              : 'text-gray-500 hover:text-gray-700'
+            }`}
+        >
+          <div className="flex items-center gap-2">
+            <BookOpen className="w-4 h-4" />
+            Coefficients
+          </div>
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        {activeTab === 'periods' && <ReportPeriodsSettings />}
+        {activeTab === 'scales' && <GradingScalesSettings />}
+        {activeTab === 'coefficients' && <CoefficientsSettings />}
+      </div>
+    </div>
+  );
+};
+
+// Sub-components
+const ReportPeriodsSettings = () => {
+  const [periods, setPeriods] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editingPeriod, setEditingPeriod] = useState(null);
+
+  useEffect(() => {
+    fetchPeriods();
+  }, []);
+
+  const fetchPeriods = async () => {
+    try {
+      setLoading(true);
+      const res = await settingsAPI.getReportPeriods();
+      if (res.success) setPeriods(res.data);
+    } catch (error) {
+      console.error('Error fetching periods:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette période ?')) {
+      try {
+        await settingsAPI.deleteReportPeriod(id);
+        fetchPeriods();
+      } catch (error) {
+        alert('Erreur lors de la suppression');
+      }
+    }
   };
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-sm">
-        {/* Tabs */}
-        <div className="border-b border-gray-200">
-          <div className="flex overflow-x-auto">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-6 py-4 border-b-2 whitespace-nowrap transition-colors ${
-                  activeTab === tab.id
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <tab.icon className="w-5 h-5" />
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="p-6">
-          {/* General Settings */}
-          {activeTab === 'general' && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-800">Paramètres généraux</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Nom de l'école</label>
-                  <input
-                    type="text"
-                    value={settings.schoolName}
-                    onChange={(e) => handleChange('schoolName', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                  <input
-                    type="email"
-                    value={settings.schoolEmail}
-                    onChange={(e) => handleChange('schoolEmail', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone</label>
-                  <input
-                    type="tel"
-                    value={settings.schoolPhone}
-                    onChange={(e) => handleChange('schoolPhone', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Adresse</label>
-                  <input
-                    type="text"
-                    value={settings.schoolAddress}
-                    onChange={(e) => handleChange('schoolAddress', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Langue</label>
-                  <select
-                    value={settings.language}
-                    onChange={(e) => handleChange('language', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="fr">Français</option>
-                    <option value="en">English</option>
-                    <option value="ht">Kreyòl Ayisyen</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Fuseau horaire</label>
-                  <select
-                    value={settings.timezone}
-                    onChange={(e) => handleChange('timezone', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="America/Port-au-Prince">Port-au-Prince (UTC-5)</option>
-                    <option value="America/New_York">New York (UTC-5)</option>
-                    <option value="Europe/Paris">Paris (UTC+1)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Notifications Settings */}
-          {activeTab === 'notifications' && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-800">Paramètres de notification</h3>
-              
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-800">Notifications par email</p>
-                    <p className="text-sm text-gray-500">Recevoir les notifications par email</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={settings.emailNotifications}
-                      onChange={(e) => handleChange('emailNotifications', e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-300 peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-800">Notifications push</p>
-                    <p className="text-sm text-gray-500">Notifications dans le navigateur</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={settings.pushNotifications}
-                      onChange={(e) => handleChange('pushNotifications', e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-300 peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-800">Notifications SMS</p>
-                    <p className="text-sm text-gray-500">Recevoir les alertes urgentes par SMS</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={settings.smsNotifications}
-                      onChange={(e) => handleChange('smsNotifications', e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-300 peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Security Settings */}
-          {activeTab === 'security' && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-800">Paramètres de sécurité</h3>
-              
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-800">Authentification à deux facteurs</p>
-                    <p className="text-sm text-gray-500">Sécurité renforcée pour les connexions</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={settings.twoFactorAuth}
-                      onChange={(e) => handleChange('twoFactorAuth', e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-300 peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
-
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <label className="block font-medium text-gray-800 mb-2">
-                    Expiration de session (minutes)
-                  </label>
-                  <input
-                    type="number"
-                    value={settings.sessionTimeout}
-                    onChange={(e) => handleChange('sessionTimeout', e.target.value)}
-                    className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <p className="font-medium text-gray-800 mb-2">Changer le mot de passe</p>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                    Modifier
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Appearance Settings */}
-          {activeTab === 'appearance' && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-800">Personnalisation</h3>
-              
-              <div className="space-y-4">
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <label className="block font-medium text-gray-800 mb-2">Logo de l'école</label>
-                  <div className="flex items-center gap-4">
-                    <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center">
-                      <Upload className="w-8 h-8 text-gray-400" />
-                    </div>
-                    <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                      Télécharger
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <label className="block font-medium text-gray-800 mb-2">Couleur principale</label>
-                  <div className="flex items-center gap-4">
-                    <input
-                      type="color"
-                      value={settings.primaryColor}
-                      onChange={(e) => handleChange('primaryColor', e.target.value)}
-                      className="w-12 h-12 rounded-lg cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={settings.primaryColor}
-                      onChange={(e) => handleChange('primaryColor', e.target.value)}
-                      className="w-32 px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Email Settings */}
-          {activeTab === 'email' && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-800">Configuration email</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Serveur SMTP</label>
-                  <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="smtp.example.com" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Port</label>
-                  <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="587" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Utilisateur</label>
-                  <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Mot de passe</label>
-                  <input type="password" className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Backup Settings */}
-          {activeTab === 'backup' && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-800">Sauvegarde des données</h3>
-              <div className="space-y-4">
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="font-medium text-blue-800">Dernière sauvegarde</p>
-                  <p className="text-sm text-blue-600">23 Novembre 2024 à 23:00</p>
-                </div>
-                <div className="flex gap-4">
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                    Sauvegarder maintenant
-                  </button>
-                  <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                    Restaurer
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Save Button */}
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
-          <button className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-            <Save className="w-4 h-4" />
-            Enregistrer les modifications
-          </button>
-        </div>
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold text-gray-800">Périodes d'Évaluation</h3>
+        <button
+          onClick={() => {
+            setEditingPeriod(null);
+            setShowModal(true);
+          }}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          <Plus className="w-4 h-4" />
+          Nouvelle Période
+        </button>
       </div>
+
+      {loading ? (
+        <div className="text-center py-8">Chargement...</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dates</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Année</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {periods.map((period) => (
+                <tr key={period.id}>
+                  <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{period.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                    {period.period_type === 'trimester' ? 'Trimestre' :
+                      period.period_type === 'semester' ? 'Semestre' : period.period_type}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                    {new Date(period.start_date).toLocaleDateString()} - {new Date(period.end_date).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-500">{period.school_year}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${period.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                      {period.is_active ? 'Actif' : 'Inactif'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      onClick={() => {
+                        setEditingPeriod(period);
+                        setShowModal(true);
+                      }}
+                      className="text-blue-600 hover:text-blue-900 mr-4"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(period.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {showModal && (
+        <PeriodModal
+          period={editingPeriod}
+          onClose={() => setShowModal(false)}
+          onSuccess={() => {
+            setShowModal(false);
+            fetchPeriods();
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+const PeriodModal = ({ period, onClose, onSuccess }) => {
+  const [formData, setFormData] = useState({
+    name: period?.name || '',
+    period_type: period?.period_type || 'trimester',
+    school_year: period?.school_year || '2024-2025',
+    start_date: period?.start_date?.split('T')[0] || '',
+    end_date: period?.end_date?.split('T')[0] || '',
+    is_active: period?.is_active ?? true
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (period) {
+        await settingsAPI.updateReportPeriod(period.id, formData);
+      } else {
+        await settingsAPI.createReportPeriod(formData);
+      }
+      onSuccess();
+    } catch (error) {
+      alert('Erreur lors de l\'enregistrement');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+        <h3 className="text-xl font-bold text-gray-800 mb-6">
+          {period ? 'Modifier la Période' : 'Nouvelle Période'}
+        </h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+            <select
+              value={formData.period_type}
+              onChange={(e) => setFormData({ ...formData, period_type: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            >
+              <option value="trimester">Trimestre</option>
+              <option value="semester">Semestre</option>
+              <option value="quarter">Bimestre</option>
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Date Début</label>
+              <input
+                type="date"
+                value={formData.start_date}
+                onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Date Fin</label>
+              <input
+                type="date"
+                value={formData.end_date}
+                onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                required
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="is_active"
+              checked={formData.is_active}
+              onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+              className="rounded text-blue-600 focus:ring-blue-500"
+            />
+            <label htmlFor="is_active" className="text-sm text-gray-700">Période active</label>
+          </div>
+          <div className="flex gap-3 pt-4">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Annuler</button>
+            <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const GradingScalesSettings = () => {
+  const [scales, setScales] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchScales();
+  }, []);
+
+  const fetchScales = async () => {
+    try {
+      setLoading(true);
+      const res = await settingsAPI.getGradingScales();
+      if (res.success) setScales(res.data);
+    } catch (error) {
+      console.error('Error fetching scales:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold text-gray-800">Échelles de Notation</h3>
+        <button
+          onClick={() => alert('Fonctionnalité à venir')}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          <Plus className="w-4 h-4" />
+          Nouvelle Échelle
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {scales.map((scale) => (
+          <div key={scale.id} className={`p-4 rounded-xl border-2 ${scale.is_default ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'}`}>
+            <div className="flex justify-between items-start mb-2">
+              <h4 className="font-bold text-gray-900">{scale.name}</h4>
+              {scale.is_default && (
+                <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
+                  Par défaut
+                </span>
+              )}
+            </div>
+            <div className="text-sm text-gray-600 space-y-1">
+              <p>Maximum: <span className="font-medium">{scale.max_value}</span></p>
+              <p>Minimum: <span className="font-medium">{scale.min_value}</span></p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const CoefficientsSettings = () => {
+  const [classes, setClasses] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [selectedClass, setSelectedClass] = useState('');
+  const [coefficients, setCoefficients] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const init = async () => {
+      const [classesRes, subjectsRes] = await Promise.all([
+        classAPI.getAll(),
+        subjectAPI.getAll()
+      ]);
+      if (classesRes.success) setClasses(classesRes.data);
+      if (subjectsRes.success) setSubjects(subjectsRes.data);
+    };
+    init();
+  }, []);
+
+  useEffect(() => {
+    if (selectedClass) fetchCoefficients();
+  }, [selectedClass]);
+
+  const fetchCoefficients = async () => {
+    setLoading(true);
+    try {
+      const res = await settingsAPI.getSubjectCoefficients({ class_id: selectedClass });
+      if (res.success) {
+        const coefMap = {};
+        res.data.forEach(c => coefMap[c.subject_id] = c.coefficient);
+        setCoefficients(coefMap);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCoefficientChange = async (subjectId, value) => {
+    try {
+      await settingsAPI.setSubjectCoefficient({
+        class_id: selectedClass,
+        subject_id: subjectId,
+        coefficient: value
+      });
+      setCoefficients(prev => ({ ...prev, [subjectId]: value }));
+    } catch (error) {
+      console.error('Error saving coefficient:', error);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="max-w-xs">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Sélectionner une Classe</label>
+        <select
+          value={selectedClass}
+          onChange={(e) => setSelectedClass(e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+        >
+          <option value="">Choisir une classe...</option>
+          {classes.map(c => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+      </div>
+
+      {selectedClass && (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Matière</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Coefficient</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {subjects.map(subject => (
+                <tr key={subject.id}>
+                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{subject.name}</td>
+                  <td className="px-6 py-4">
+                    <input
+                      type="number"
+                      min="0.1"
+                      step="0.1"
+                      value={coefficients[subject.id] || 1}
+                      onChange={(e) => handleCoefficientChange(subject.id, e.target.value)}
+                      className="w-24 px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };

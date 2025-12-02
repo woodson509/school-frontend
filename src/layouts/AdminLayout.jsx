@@ -83,6 +83,8 @@ const AdminLayout = () => {
         { label: 'Classes', icon: School, path: '/classes' },
         { label: 'Examens', icon: FileText, path: '/exams' },
         { label: 'Notes', icon: Award, path: '/grades' },
+        { label: 'Compétences', icon: Award, path: '/competencies' },
+        { label: 'Bulletins', icon: FileText, path: '/reports' },
         { label: 'Présences', icon: ClipboardList, path: '/attendance' },
         { label: 'Emplois du temps', icon: Clock, path: '/schedules' },
       ],
