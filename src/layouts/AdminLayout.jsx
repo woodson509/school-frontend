@@ -38,6 +38,7 @@ import {
   CreditCard,
   FileSpreadsheet,
   Megaphone,
+  TrendingUp,
 } from 'lucide-react';
 
 const AdminLayout = () => {
