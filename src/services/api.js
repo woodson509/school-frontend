@@ -919,6 +919,182 @@ export const paymentAPI = {
   },
 };
 
+/**
+ * Settings & Grading System APIs
+ */
+export const settingsAPI = {
+  getSettings: async () => {
+    return fetchWithAuth('/settings');
+  },
+
+  updateSetting: async (data) => {
+    return fetchWithAuth('/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getGradingScales: async () => {
+    return fetchWithAuth('/grading-scales');
+  },
+
+  createGradingScale: async (data) => {
+    return fetchWithAuth('/grading-scales', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getReportPeriods: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/report-periods${queryString ? `?${queryString}` : ''}`);
+  },
+
+  createReportPeriod: async (data) => {
+    return fetchWithAuth('/report-periods', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateReportPeriod: async (id, data) => {
+    return fetchWithAuth(`/report-periods/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteReportPeriod: async (id) => {
+    return fetchWithAuth(`/report-periods/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getSubjectCoefficients: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/subject-coefficients${queryString ? `?${queryString}` : ''}`);
+  },
+
+  setSubjectCoefficient: async (data) => {
+    return fetchWithAuth('/subject-coefficients', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+};
+
+export const gradesAPI = {
+  getGrades: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/grades${queryString ? `?${queryString}` : ''}`);
+  },
+
+  createGrade: async (data) => {
+    return fetchWithAuth('/grades', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateGrade: async (id, data) => {
+    return fetchWithAuth(`/grades/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteGrade: async (id) => {
+    return fetchWithAuth(`/grades/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  calculateAverage: async (params) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/grades/average?${queryString}`);
+  },
+
+  calculateOverallAverage: async (params) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/grades/overall-average?${queryString}`);
+  },
+};
+
+export const competencyAPI = {
+  getCompetencies: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/competencies${queryString ? `?${queryString}` : ''}`);
+  },
+
+  createCompetency: async (data) => {
+    return fetchWithAuth('/competencies', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateCompetency: async (id, data) => {
+    return fetchWithAuth(`/competencies/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteCompetency: async (id) => {
+    return fetchWithAuth(`/competencies/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getEvaluations: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/competency-evaluations${queryString ? `?${queryString}` : ''}`);
+  },
+
+  evaluateCompetency: async (data) => {
+    return fetchWithAuth('/competency-evaluations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getStudentSummary: async (params) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/competency-evaluations/summary?${queryString}`);
+  },
+};
+
+export const reportCardAPI = {
+  generate: async (data) => {
+    return fetchWithAuth('/report-cards/generate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/report-cards${queryString ? `?${queryString}` : ''}`);
+  },
+
+  getById: async (id) => {
+    return fetchWithAuth(`/report-cards/${id}`);
+  },
+};
+
+export const badgeAPI = {
+  getAll: async () => fetchWithAuth('/badges'),
+  create: async (data) => fetchWithAuth('/badges', { method: 'POST', body: JSON.stringify(data) }),
+  award: async (data) => fetchWithAuth('/badges/award', { method: 'POST', body: JSON.stringify(data) }),
+  getStudentBadges: async (studentId) => fetchWithAuth(`/students/${studentId}/badges`),
+};
+
+export const analyticsAPI = {
+  getPredictions: async (studentId) => fetchWithAuth(`/analytics/predictions/${studentId}`),
+  getScholarshipCandidates: async () => fetchWithAuth('/analytics/scholarships'),
+};
+
+
 export default {
   authAPI,
   courseAPI,
@@ -939,4 +1115,11 @@ export default {
   curriculumAPI,
   scheduleAPI,
   paymentAPI,
+  settingsAPI,
+  gradesAPI,
+  gradesAPI,
+  competencyAPI,
+  reportCardAPI,
+  badgeAPI,
+  analyticsAPI,
 };

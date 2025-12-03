@@ -85,6 +85,8 @@ const AdminLayout = () => {
         { label: 'Notes', icon: Award, path: '/grades' },
         { label: 'Compétences', icon: Award, path: '/competencies' },
         { label: 'Bulletins', icon: FileText, path: '/reports' },
+        { label: 'Badges', icon: Award, path: '/badges' },
+        { label: 'Analytique', icon: TrendingUp, path: '/analytics' },
         { label: 'Présences', icon: ClipboardList, path: '/attendance' },
         { label: 'Emplois du temps', icon: Clock, path: '/schedules' },
       ],

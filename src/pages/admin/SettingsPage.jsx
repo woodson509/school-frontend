@@ -16,7 +16,9 @@ import {
   Check,
   X
 } from 'lucide-react';
-import { settingsAPI, classAPI, subjectAPI } from '../../services/api';
+import api from '../../services/api';
+
+const { settingsAPI, classAPI, subjectAPI } = api;
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('periods');
@@ -31,8 +33,8 @@ const SettingsPage = () => {
         <button
           onClick={() => setActiveTab('periods')}
           className={`pb-2 px-4 font-medium text-sm transition-colors ${activeTab === 'periods'
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-gray-500 hover:text-gray-700'
+            ? 'border-b-2 border-blue-600 text-blue-600'
+            : 'text-gray-500 hover:text-gray-700'
             }`}
         >
           <div className="flex items-center gap-2">
@@ -43,8 +45,8 @@ const SettingsPage = () => {
         <button
           onClick={() => setActiveTab('scales')}
           className={`pb-2 px-4 font-medium text-sm transition-colors ${activeTab === 'scales'
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-gray-500 hover:text-gray-700'
+            ? 'border-b-2 border-blue-600 text-blue-600'
+            : 'text-gray-500 hover:text-gray-700'
             }`}
         >
           <div className="flex items-center gap-2">
@@ -55,8 +57,8 @@ const SettingsPage = () => {
         <button
           onClick={() => setActiveTab('coefficients')}
           className={`pb-2 px-4 font-medium text-sm transition-colors ${activeTab === 'coefficients'
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-gray-500 hover:text-gray-700'
+            ? 'border-b-2 border-blue-600 text-blue-600'
+            : 'text-gray-500 hover:text-gray-700'
             }`}
         >
           <div className="flex items-center gap-2">

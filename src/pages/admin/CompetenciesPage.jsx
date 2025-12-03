@@ -15,7 +15,9 @@ import {
     XCircle,
     AlertCircle
 } from 'lucide-react';
-import { competencyAPI, subjectAPI } from '../../services/api';
+import api from '../../services/api';
+
+const { competencyAPI, subjectAPI } = api;
 
 const CompetenciesPage = () => {
     const [activeTab, setActiveTab] = useState('framework'); // framework, evaluations
@@ -29,8 +31,8 @@ const CompetenciesPage = () => {
                 <button
                     onClick={() => setActiveTab('framework')}
                     className={`pb-2 px-4 font-medium text-sm transition-colors ${activeTab === 'framework'
-                            ? 'border-b-2 border-blue-600 text-blue-600'
-                            : 'text-gray-500 hover:text-gray-700'
+                        ? 'border-b-2 border-blue-600 text-blue-600'
+                        : 'text-gray-500 hover:text-gray-700'
                         }`}
                 >
                     Référentiel
@@ -38,8 +40,8 @@ const CompetenciesPage = () => {
                 <button
                     onClick={() => setActiveTab('evaluations')}
                     className={`pb-2 px-4 font-medium text-sm transition-colors ${activeTab === 'evaluations'
-                            ? 'border-b-2 border-blue-600 text-blue-600'
-                            : 'text-gray-500 hover:text-gray-700'
+                        ? 'border-b-2 border-blue-600 text-blue-600'
+                        : 'text-gray-500 hover:text-gray-700'
                         }`}
                 >
                     Évaluations
