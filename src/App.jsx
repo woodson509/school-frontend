@@ -105,6 +105,7 @@ const TeacherAnnouncementsPage = lazy(() => import('./pages/teacher/Announcement
 const TeacherPortfolioPage = lazy(() => import('./pages/teacher/PortfolioPage'));
 const TeacherHelpPage = lazy(() => import('./pages/teacher/HelpPage'));
 const TeacherProfilePage = lazy(() => import('./pages/teacher/ProfilePage'));
+const TeacherCalendarPage = lazy(() => import('./pages/teacher/CalendarPage'));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -299,6 +300,7 @@ const AppRoutes = () => {
               <Route path="announcements" element={<TeacherAnnouncementsPage />} />
 
               {/* Other Routes */}
+              <Route path="calendar" element={<TeacherCalendarPage />} />
               <Route path="portfolio" element={<TeacherPortfolioPage />} />
               <Route path="help" element={<TeacherHelpPage />} />
               <Route path="profile" element={<TeacherProfilePage />} />
