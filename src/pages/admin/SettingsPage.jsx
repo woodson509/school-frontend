@@ -14,14 +14,16 @@ import {
   Trash2,
   Edit2,
   Check,
-  X
+  Check,
+  X,
+  Building2
 } from 'lucide-react';
 import api from '../../services/api';
 
-const { settingsAPI, classAPI, subjectAPI } = api;
+const { settingsAPI, classAPI, subjectAPI, schoolAPI } = api;
 
 const SettingsPage = () => {
-  const [activeTab, setActiveTab] = useState('periods');
+  const [activeTab, setActiveTab] = useState('general');
   const [loading, setLoading] = useState(true);
 
   return (
@@ -29,7 +31,19 @@ const SettingsPage = () => {
       <h1 className="text-2xl font-bold text-gray-800">Configuration de l'École</h1>
 
       {/* Tabs */}
-      <div className="flex space-x-4 border-b border-gray-200">
+      <div className="flex space-x-4 border-b border-gray-200 overflow-x-auto">
+        <button
+          onClick={() => setActiveTab('general')}
+          className={`pb-2 px-4 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'general'
+            ? 'border-b-2 border-blue-600 text-blue-600'
+            : 'text-gray-500 hover:text-gray-700'
+            }`}
+        >
+          <div className="flex items-center gap-2">
+            <Building2 className="w-4 h-4" />
+            Général
+          </div>
+        </button>
         <button
           onClick={() => setActiveTab('periods')}
           className={`pb-2 px-4 font-medium text-sm transition-colors ${activeTab === 'periods'
@@ -70,10 +84,155 @@ const SettingsPage = () => {
 
       {/* Content */}
       <div className="bg-white rounded-xl shadow-sm p-6">
+        {activeTab === 'general' && <GeneralSettings />}
         {activeTab === 'periods' && <ReportPeriodsSettings />}
         {activeTab === 'scales' && <GradingScalesSettings />}
         {activeTab === 'coefficients' && <CoefficientsSettings />}
       </div>
+    </div>
+  );
+};
+
+};
+
+// Sub-components
+const GeneralSettings = () => {
+  const [school, setSchool] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    address: '',
+    phone: '',
+    email: '',
+    website: '',
+    principal_name: ''
+  });
+
+  useEffect(() => {
+    fetchSchoolInfo();
+  }, []);
+
+  const fetchSchoolInfo = async () => {
+    try {
+      setLoading(true);
+      const res = await schoolAPI.getSchool();
+      if (res.success && res.data) {
+        setSchool(res.data);
+        setFormData({
+          name: res.data.name || '',
+          address: res.data.address || '',
+          phone: res.data.phone || '',
+          email: res.data.email || '',
+          website: res.data.website || '',
+          principal_name: res.data.principal_name || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching school info:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const res = await schoolAPI.updateSchool(formData);
+      if (res.success) {
+        setSchool(res.data);
+        alert('Informations mises à jour avec succès');
+      }
+    } catch (error) {
+      console.error('Error updating school:', error);
+      alert('Erreur lors de la mise à jour');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <div className="text-center py-8">Chargement...</div>;
+
+  return (
+    <div className="max-w-2xl">
+      <h3 className="text-lg font-semibold text-gray-800 mb-6">Informations de l'École</h3>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Nom de l'École</label>
+          <input
+            type="text"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
+          <textarea
+            value={formData.address}
+            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            rows="3"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
+            <input
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Site Web</label>
+            <input
+              type="url"
+              value={formData.website}
+              onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="https://"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Directeur / Principal</label>
+            <input
+              type="text"
+              value={formData.principal_name}
+              onChange={(e) => setFormData({ ...formData, principal_name: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+
+        <div className="pt-4">
+          <button
+            type="submit"
+            disabled={saving}
+            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          >
+            <Save className="w-4 h-4" />
+            {saving ? 'Enregistrement...' : 'Enregistrer'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };
