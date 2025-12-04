@@ -1095,6 +1095,17 @@ export const analyticsAPI = {
   getScholarshipCandidates: async () => fetchWithAuth('/analytics/scholarships'),
 };
 
+export const eventAPI = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/events${queryString ? `?${queryString}` : ''}`);
+  },
+  getById: async (id) => fetchWithAuth(`/events/${id}`),
+  create: async (data) => fetchWithAuth('/events', { method: 'POST', body: JSON.stringify(data) }),
+  update: async (id, data) => fetchWithAuth(`/events/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: async (id) => fetchWithAuth(`/events/${id}`, { method: 'DELETE' }),
+};
+
 
 export default {
   authAPI,
@@ -1123,4 +1134,5 @@ export default {
   reportCardAPI,
   badgeAPI,
   analyticsAPI,
+  eventAPI,
 };

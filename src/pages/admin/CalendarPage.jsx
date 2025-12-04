@@ -3,7 +3,7 @@
  * Manage academic year, holidays, events
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Calendar,
   ChevronLeft,
@@ -13,23 +13,65 @@ import {
   Trash2,
   Clock,
   MapPin,
-  Users,
+  X,
+  Loader2,
 } from 'lucide-react';
+import api from '../../services/api';
+
+const { eventAPI } = api;
 
 const CalendarPage = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    date: '',
+    endDate: '',
+    type: 'academic',
+    location: '',
+  });
 
-  const events = [
-    { id: 1, title: 'Rentrée scolaire', date: '2024-09-02', type: 'academic', color: '#3B82F6' },
-    { id: 2, title: 'Examens de mi-trimestre', date: '2024-10-21', endDate: '2024-10-25', type: 'exam', color: '#EF4444' },
-    { id: 3, title: 'Vacances de la Toussaint', date: '2024-10-26', endDate: '2024-11-03', type: 'holiday', color: '#10B981' },
-    { id: 4, title: 'Conseil de classe - 6ème', date: '2024-12-15', type: 'meeting', color: '#8B5CF6' },
-    { id: 5, title: 'Vacances de Noël', date: '2024-12-21', endDate: '2025-01-05', type: 'holiday', color: '#10B981' },
-    { id: 6, title: 'Examens finaux', date: '2024-12-16', endDate: '2024-12-20', type: 'exam', color: '#EF4444' },
-    { id: 7, title: 'Réunion parents-professeurs', date: '2024-12-10', type: 'meeting', color: '#8B5CF6' },
-  ];
+  const typeColors = {
+    academic: '#3B82F6',
+    exam: '#EF4444',
+    holiday: '#10B981',
+    meeting: '#8B5CF6',
+    other: '#6B7280',
+  };
+
+  const typeLabels = {
+    academic: 'Académique',
+    exam: 'Examen',
+    holiday: 'Vacances',
+    meeting: 'Réunion',
+    other: 'Autre',
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, [currentDate]);
+
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      const month = currentDate.getMonth() + 1;
+      const year = currentDate.getFullYear();
+      const res = await eventAPI.getAll({ month, year });
+      if (res.success) {
+        setEvents(res.data);
+      }
+    } catch (error) {
+      console.error('Error fetching events:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const upcomingEvents = events
     .filter(e => new Date(e.date) >= new Date())
@@ -43,7 +85,7 @@ const CalendarPage = () => {
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
     const startingDay = firstDay.getDay();
-    
+
     const days = [];
     for (let i = 0; i < startingDay; i++) {
       days.push(null);
@@ -69,11 +111,69 @@ const CalendarPage = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + direction, 1));
   };
 
-  const typeLabels = {
-    academic: 'Académique',
-    exam: 'Examen',
-    holiday: 'Vacances',
-    meeting: 'Réunion',
+  const openModal = (event = null) => {
+    if (event) {
+      setEditingEvent(event);
+      setFormData({
+        title: event.title,
+        description: event.description || '',
+        date: event.date?.split('T')[0] || '',
+        endDate: event.endDate?.split('T')[0] || '',
+        type: event.type,
+        location: event.location || '',
+      });
+    } else {
+      setEditingEvent(null);
+      setFormData({
+        title: '',
+        description: '',
+        date: selectedDate
+          ? `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`
+          : '',
+        endDate: '',
+        type: 'academic',
+        location: '',
+      });
+    }
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingEvent(null);
+    setFormData({ title: '', description: '', date: '', endDate: '', type: 'academic', location: '' });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.title || !formData.date || !formData.type) return;
+
+    try {
+      setSaving(true);
+      if (editingEvent) {
+        await eventAPI.update(editingEvent.id, formData);
+      } else {
+        await eventAPI.create(formData);
+      }
+      await fetchEvents();
+      closeModal();
+    } catch (error) {
+      console.error('Error saving event:', error);
+      alert('Erreur lors de la sauvegarde');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Supprimer cet événement ?')) return;
+    try {
+      await eventAPI.delete(id);
+      await fetchEvents();
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      alert('Erreur lors de la suppression');
+    }
   };
 
   return (
@@ -117,55 +217,68 @@ const CalendarPage = () => {
           </div>
 
           {/* Calendar days */}
-          <div className="grid grid-cols-7 gap-1">
-            {getDaysInMonth(currentDate).map((day, index) => {
-              const dayEvents = getEventsForDate(day);
-              const isToday = day === new Date().getDate() && 
-                currentDate.getMonth() === new Date().getMonth() &&
-                currentDate.getFullYear() === new Date().getFullYear();
-              
-              return (
-                <div
-                  key={index}
-                  onClick={() => day && setSelectedDate(day)}
-                  className={`min-h-24 p-2 border rounded-lg cursor-pointer transition-colors ${
-                    day ? 'hover:bg-gray-50' : ''
-                  } ${isToday ? 'bg-blue-50 border-blue-300' : 'border-gray-200'} ${
-                    selectedDate === day ? 'ring-2 ring-blue-500' : ''
-                  }`}
-                >
-                  {day && (
-                    <>
-                      <span className={`text-sm font-medium ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
-                        {day}
-                      </span>
-                      <div className="mt-1 space-y-1">
-                        {dayEvents.slice(0, 2).map(event => (
-                          <div
-                            key={event.id}
-                            className="text-xs px-1 py-0.5 rounded truncate"
-                            style={{ backgroundColor: `${event.color}20`, color: event.color }}
-                          >
-                            {event.title}
-                          </div>
-                        ))}
-                        {dayEvents.length > 2 && (
-                          <div className="text-xs text-gray-500">+{dayEvents.length - 2} plus</div>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-7 gap-1">
+              {getDaysInMonth(currentDate).map((day, index) => {
+                const dayEvents = getEventsForDate(day);
+                const isToday = day === new Date().getDate() &&
+                  currentDate.getMonth() === new Date().getMonth() &&
+                  currentDate.getFullYear() === new Date().getFullYear();
+
+                return (
+                  <div
+                    key={index}
+                    onClick={() => {
+                      if (day) {
+                        setSelectedDate(day);
+                        openModal();
+                      }
+                    }}
+                    className={`min-h-24 p-2 border rounded-lg cursor-pointer transition-colors ${day ? 'hover:bg-gray-50' : ''
+                      } ${isToday ? 'bg-blue-50 border-blue-300' : 'border-gray-200'} ${selectedDate === day ? 'ring-2 ring-blue-500' : ''
+                      }`}
+                  >
+                    {day && (
+                      <>
+                        <span className={`text-sm font-medium ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
+                          {day}
+                        </span>
+                        <div className="mt-1 space-y-1">
+                          {dayEvents.slice(0, 2).map(event => (
+                            <div
+                              key={event.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openModal(event);
+                              }}
+                              className="text-xs px-1 py-0.5 rounded truncate cursor-pointer hover:opacity-80"
+                              style={{ backgroundColor: `${event.color || typeColors[event.type]}20`, color: event.color || typeColors[event.type] }}
+                            >
+                              {event.title}
+                            </div>
+                          ))}
+                          {dayEvents.length > 2 && (
+                            <div className="text-xs text-gray-500">+{dayEvents.length - 2} plus</div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Add Event Button */}
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => openModal()}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
           >
             <Plus className="w-5 h-5" />
@@ -180,7 +293,7 @@ const CalendarPage = () => {
                 <div key={type} className="flex items-center gap-2">
                   <div
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: type === 'academic' ? '#3B82F6' : type === 'exam' ? '#EF4444' : type === 'holiday' ? '#10B981' : '#8B5CF6' }}
+                    style={{ backgroundColor: typeColors[type] }}
                   />
                   <span className="text-sm text-gray-600">{label}</span>
                 </div>
@@ -191,47 +304,76 @@ const CalendarPage = () => {
           {/* Upcoming Events */}
           <div className="bg-white rounded-xl shadow-sm p-4">
             <h4 className="font-semibold text-gray-800 mb-4">Événements à venir</h4>
-            <div className="space-y-3">
-              {upcomingEvents.map(event => (
-                <div key={event.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                  <div
-                    className="w-1 h-full min-h-12 rounded-full"
-                    style={{ backgroundColor: event.color }}
-                  />
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-800 text-sm">{event.title}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {new Date(event.date).toLocaleDateString('fr-FR')}
-                      {event.endDate && ` - ${new Date(event.endDate).toLocaleDateString('fr-FR')}`}
-                    </p>
+            {upcomingEvents.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-4">Aucun événement à venir</p>
+            ) : (
+              <div className="space-y-3">
+                {upcomingEvents.map(event => (
+                  <div key={event.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg group">
+                    <div
+                      className="w-1 h-full min-h-12 rounded-full"
+                      style={{ backgroundColor: event.color || typeColors[event.type] }}
+                    />
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-800 text-sm">{event.title}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(event.date).toLocaleDateString('fr-FR')}
+                        {event.endDate && ` - ${new Date(event.endDate).toLocaleDateString('fr-FR')}`}
+                      </p>
+                    </div>
+                    <div className="hidden group-hover:flex gap-1">
+                      <button
+                        onClick={() => openModal(event)}
+                        className="p-1 text-gray-400 hover:text-blue-600"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(event.id)}
+                        className="p-1 text-gray-400 hover:text-red-600"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Add Event Modal */}
+      {/* Add/Edit Event Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h3 className="text-xl font-bold text-gray-800 mb-6">Nouvel événement</h3>
-            <form className="space-y-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={closeModal}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-800">
+                {editingEvent ? 'Modifier l\'événement' : 'Nouvel événement'}
+              </h3>
+              <button onClick={closeModal} className="p-1 hover:bg-gray-100 rounded">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Titre</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Titre *</label>
                 <input
                   type="text"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Date de début</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date de début *</label>
                   <input
                     type="date"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   />
                 </div>
@@ -239,39 +381,70 @@ const CalendarPage = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Date de fin</label>
                   <input
                     type="date"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    value={formData.endDate}
+                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                  <option value="academic">Académique</option>
-                  <option value="exam">Examen</option>
-                  <option value="holiday">Vacances</option>
-                  <option value="meeting">Réunion</option>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+                <select
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {Object.entries(typeLabels).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Lieu</label>
+                <input
+                  type="text"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Salle de réunion, en ligne, etc."
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <textarea
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   rows={3}
                 />
               </div>
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={closeModal}
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
                   Annuler
                 </button>
+                {editingEvent && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleDelete(editingEvent.id);
+                      closeModal();
+                    }}
+                    className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  disabled={saving}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  Créer
+                  {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {editingEvent ? 'Mettre à jour' : 'Créer'}
                 </button>
               </div>
             </form>
@@ -283,3 +456,4 @@ const CalendarPage = () => {
 };
 
 export default CalendarPage;
+
