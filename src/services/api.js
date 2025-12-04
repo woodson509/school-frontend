@@ -1090,6 +1090,7 @@ export const badgeAPI = {
 };
 
 export const analyticsAPI = {
+  getStats: async () => fetchWithAuth('/analytics/stats'),
   getPredictions: async (studentId) => fetchWithAuth(`/analytics/predictions/${studentId}`),
   getScholarshipCandidates: async () => fetchWithAuth('/analytics/scholarships'),
 };

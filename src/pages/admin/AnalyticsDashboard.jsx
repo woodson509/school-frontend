@@ -51,39 +51,18 @@ const AnalyticsDashboard = () => {
     const [stats, setStats] = useState(null);
     const [activeTab, setActiveTab] = useState('overview');
 
-    // Mock data for demo - replace with API calls
-    const [gradeDistribution] = useState([
-        { range: '0-5', count: 2, color: '#ef4444' },
-        { range: '6-9', count: 8, color: '#f59e0b' },
-        { range: '10-12', count: 25, color: '#fbbf24' },
-        { range: '13-15', count: 35, color: '#10b981' },
-        { range: '16-18', count: 20, color: '#2563eb' },
-        { range: '19-20', count: 10, color: '#8b5cf6' }
-    ]);
+    // State for real data from API
+    const [gradeDistribution, setGradeDistribution] = useState([]);
+    const [classPerformance, setClassPerformance] = useState([]);
+    const [subjectPerformance, setSubjectPerformance] = useState([]);
+    const [attendanceStats, setAttendanceStats] = useState({ presentRate: 0, lateRate: 0, absentRate: 0 });
 
+    // Attendance trend data (static for now until monthly API is added)
     const [attendanceData] = useState([
         { month: 'Sep', present: 92, absent: 5, late: 3 },
         { month: 'Oct', present: 88, absent: 8, late: 4 },
         { month: 'Nov', present: 90, absent: 6, late: 4 },
         { month: 'Déc', present: 85, absent: 10, late: 5 }
-    ]);
-
-    const [classPerformance] = useState([
-        { name: '6ème A', average: 14.2, students: 32 },
-        { name: '6ème B', average: 13.8, students: 30 },
-        { name: '5ème A', average: 12.5, students: 28 },
-        { name: '5ème B', average: 13.1, students: 29 },
-        { name: '4ème', average: 11.9, students: 25 },
-        { name: '3ème', average: 12.8, students: 27 }
-    ]);
-
-    const [subjectPerformance] = useState([
-        { subject: 'Mathématiques', average: 12.5, passRate: 72 },
-        { subject: 'Français', average: 13.2, passRate: 78 },
-        { subject: 'Sciences', average: 14.1, passRate: 85 },
-        { subject: 'Histoire-Géo', average: 13.8, passRate: 80 },
-        { subject: 'Anglais', average: 11.9, passRate: 68 },
-        { subject: 'Créole', average: 15.2, passRate: 92 }
     ]);
 
     useEffect(() => {
@@ -95,11 +74,29 @@ const AnalyticsDashboard = () => {
             setLoading(true);
             const [candidatesRes, statsRes] = await Promise.all([
                 analyticsAPI.getScholarshipCandidates().catch(() => ({ success: false })),
-                dashboardAPI?.getStats?.().catch(() => ({ success: false }))
+                analyticsAPI.getStats().catch(() => ({ success: false }))
             ]);
 
             if (candidatesRes.success) setScholarshipCandidates(candidatesRes.data);
-            if (statsRes?.success) setStats(statsRes.data);
+
+            if (statsRes?.success && statsRes.data) {
+                const data = statsRes.data;
+                setStats(data);
+
+                // Set real data from API
+                if (data.gradeDistribution?.length > 0) {
+                    setGradeDistribution(data.gradeDistribution);
+                }
+                if (data.classPerformance?.length > 0) {
+                    setClassPerformance(data.classPerformance);
+                }
+                if (data.subjectPerformance?.length > 0) {
+                    setSubjectPerformance(data.subjectPerformance);
+                }
+                if (data.attendanceStats) {
+                    setAttendanceStats(data.attendanceStats);
+                }
+            }
         } catch (error) {
             console.error('Error fetching analytics data:', error);
         } finally {
@@ -122,35 +119,35 @@ const AnalyticsDashboard = () => {
     const kpiCards = [
         {
             title: 'Élèves Inscrits',
-            value: stats?.totalStudents || 171,
+            value: stats?.totalStudents || 0,
             icon: Users,
             color: 'bg-blue-500',
-            trend: '+12%',
+            trend: stats?.totalStudents > 0 ? '+' : '',
             trendUp: true
         },
         {
             title: 'Moyenne Générale',
-            value: '13.2/20',
+            value: stats?.schoolAverage ? `${stats.schoolAverage}/20` : 'N/A',
             icon: Target,
             color: 'bg-green-500',
-            trend: '+0.5',
-            trendUp: true
+            trend: stats?.schoolAverage >= 10 ? '✓' : '',
+            trendUp: stats?.schoolAverage >= 10
         },
         {
             title: 'Taux de Présence',
-            value: '89%',
+            value: attendanceStats.presentRate ? `${attendanceStats.presentRate}%` : 'N/A',
             icon: CheckCircle,
             color: 'bg-emerald-500',
-            trend: '-2%',
-            trendUp: false
+            trend: attendanceStats.presentRate >= 80 ? '✓' : '',
+            trendUp: attendanceStats.presentRate >= 80
         },
         {
             title: 'Taux de Réussite',
-            value: '78%',
+            value: stats?.passRate ? `${stats.passRate}%` : 'N/A',
             icon: GraduationCap,
             color: 'bg-purple-500',
-            trend: '+5%',
-            trendUp: true
+            trend: stats?.passRate >= 50 ? '✓' : '',
+            trendUp: stats?.passRate >= 50
         }
     ];
 
@@ -213,8 +210,8 @@ const AnalyticsDashboard = () => {
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`flex items-center gap-2 px-6 py-4 text-sm font-medium whitespace-nowrap transition-colors ${activeTab === tab.id
-                                        ? 'border-b-2 border-blue-600 text-blue-600'
-                                        : 'text-gray-500 hover:text-gray-700'
+                                    ? 'border-b-2 border-blue-600 text-blue-600'
+                                    : 'text-gray-500 hover:text-gray-700'
                                     }`}
                             >
                                 <tab.icon className="w-4 h-4" />
@@ -443,8 +440,8 @@ const AnalyticsDashboard = () => {
                                                         </td>
                                                         <td className="px-6 py-4">
                                                             <span className={`px-2 py-1 text-xs rounded-full ${candidate.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                                                    candidate.status === 'reviewed' ? 'bg-blue-100 text-blue-800' :
-                                                                        'bg-yellow-100 text-yellow-800'
+                                                                candidate.status === 'reviewed' ? 'bg-blue-100 text-blue-800' :
+                                                                    'bg-yellow-100 text-yellow-800'
                                                                 }`}>
                                                                 {candidate.status === 'approved' ? 'Approuvé' :
                                                                     candidate.status === 'reviewed' ? 'Révisé' : 'Identifié'}

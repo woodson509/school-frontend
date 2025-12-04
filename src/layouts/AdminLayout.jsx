@@ -84,7 +84,7 @@ const AdminLayout = () => {
         { label: 'Programmes', icon: Layers, path: '/curricula' },
         { label: 'Classes', icon: School, path: '/classes' },
         { label: 'Examens', icon: FileText, path: '/exams' },
-        { label: 'Notes', icon: Award, path: '/grades' },
+        { label: 'Notes', icon: FileSpreadsheet, path: '/grades' },
         { label: 'Compétences', icon: CheckSquare, path: '/competencies' },
         { label: 'Bulletins', icon: FileText, path: '/report-cards' },
         { label: 'Badges', icon: Award, path: '/badges' },
