@@ -14,11 +14,12 @@ import {
   Calendar,
   Users,
   Pin,
-  Send,
-  Clock,
   CheckCircle,
-  AlertCircle,
+  Loader2,
 } from 'lucide-react';
+import api from '../../services/api';
+
+const { announcementAPI } = api;
 
 const AnnouncementsPage = () => {
   const [announcements, setAnnouncements] = useState([]);
@@ -28,20 +29,22 @@ const AnnouncementsPage = () => {
   const [editingAnnouncement, setEditingAnnouncement] = useState(null);
 
   useEffect(() => {
-    const sampleAnnouncements = [
-      { id: 1, title: 'Vacances de Noël 2024', content: 'Les vacances de Noël commenceront le 21 décembre...', audience: 'Tous', priority: 'high', status: 'published', pinned: true, date: '2024-12-10', views: 450 },
-      { id: 2, title: 'Réunion parents-professeurs', content: 'Une réunion parents-professeurs aura lieu le 15 décembre...', audience: 'Parents', priority: 'medium', status: 'published', pinned: true, date: '2024-12-08', views: 280 },
-      { id: 3, title: 'Examens de fin de trimestre', content: 'Les examens de fin de trimestre débuteront le 16 décembre...', audience: 'Étudiants', priority: 'high', status: 'published', pinned: false, date: '2024-12-05', views: 520 },
-      { id: 4, title: 'Nouvelle bibliothèque numérique', content: 'Nous sommes heureux d\'annoncer l\'ouverture de notre bibliothèque...', audience: 'Tous', priority: 'low', status: 'published', pinned: false, date: '2024-12-01', views: 180 },
-      { id: 5, title: 'Journée sportive', content: 'Une journée sportive sera organisée le 20 décembre...', audience: 'Étudiants', priority: 'medium', status: 'draft', pinned: false, date: '2024-12-12', views: 0 },
-      { id: 6, title: 'Changement d\'horaires', content: 'À partir de janvier, les horaires seront modifiés...', audience: 'Tous', priority: 'medium', status: 'scheduled', pinned: false, date: '2024-12-20', views: 0 },
-    ];
-    
-    setTimeout(() => {
-      setAnnouncements(sampleAnnouncements);
-      setLoading(false);
-    }, 500);
+    fetchAnnouncements();
   }, []);
+
+  const fetchAnnouncements = async () => {
+    try {
+      setLoading(true);
+      const res = await announcementAPI.getAll();
+      if (res.success) {
+        setAnnouncements(res.data);
+      }
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredAnnouncements = announcements.filter(a =>
     a.title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -55,42 +58,48 @@ const AnnouncementsPage = () => {
     };
     const labels = { high: 'Haute', medium: 'Moyenne', low: 'Basse' };
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[priority]}`}>
-        {labels[priority]}
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[priority] || styles.medium}`}>
+        {labels[priority] || labels.medium}
       </span>
     );
   };
 
-  const getStatusBadge = (status) => {
-    const styles = {
-      published: 'bg-green-100 text-green-700',
-      draft: 'bg-gray-100 text-gray-700',
-      scheduled: 'bg-blue-100 text-blue-700',
-    };
-    const labels = { published: 'Publié', draft: 'Brouillon', scheduled: 'Programmé' };
-    return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[status]}`}>
-        {labels[status]}
+  const getStatusBadge = (isPublished) => {
+    return isPublished ? (
+      <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+        Publié
+      </span>
+    ) : (
+      <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+        Brouillon
       </span>
     );
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette annonce ?')) {
-      setAnnouncements(announcements.filter(a => a.id !== id));
+      try {
+        await announcementAPI.delete(id);
+        fetchAnnouncements();
+      } catch (error) {
+        console.error('Error deleting announcement:', error);
+      }
     }
   };
 
-  const togglePin = (id) => {
-    setAnnouncements(announcements.map(a =>
-      a.id === id ? { ...a, pinned: !a.pinned } : a
-    ));
+  const togglePin = async (announcement) => {
+    try {
+      await announcementAPI.update(announcement.id, { is_pinned: !announcement.is_pinned });
+      fetchAnnouncements();
+    } catch (error) {
+      console.error('Error toggling pin:', error);
+    }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
   }
@@ -110,7 +119,7 @@ const AnnouncementsPage = () => {
           />
         </div>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => { setEditingAnnouncement(null); setShowModal(true); }}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           <Plus className="w-4 h-4" />
@@ -138,7 +147,7 @@ const AnnouncementsPage = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-800">
-                {announcements.filter(a => a.status === 'published').length}
+                {announcements.filter(a => a.is_published).length}
               </p>
               <p className="text-sm text-gray-500">Publiées</p>
             </div>
@@ -151,7 +160,7 @@ const AnnouncementsPage = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-800">
-                {announcements.filter(a => a.pinned).length}
+                {announcements.filter(a => a.is_pinned).length}
               </p>
               <p className="text-sm text-gray-500">Épinglées</p>
             </div>
@@ -163,9 +172,7 @@ const AnnouncementsPage = () => {
               <Eye className="w-6 h-6 text-purple-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-800">
-                {announcements.reduce((acc, a) => acc + a.views, 0).toLocaleString()}
-              </p>
+              <p className="text-2xl font-bold text-gray-800">0</p>
               <p className="text-sm text-gray-500">Vues totales</p>
             </div>
           </div>
@@ -175,16 +182,16 @@ const AnnouncementsPage = () => {
       {/* Announcements List */}
       <div className="space-y-4">
         {/* Pinned */}
-        {filteredAnnouncements.filter(a => a.pinned).length > 0 && (
+        {filteredAnnouncements.filter(a => a.is_pinned).length > 0 && (
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Annonces épinglées</h3>
-            {filteredAnnouncements.filter(a => a.pinned).map((announcement) => (
+            {filteredAnnouncements.filter(a => a.is_pinned).map((announcement) => (
               <AnnouncementCard
                 key={announcement.id}
                 announcement={announcement}
                 onEdit={() => { setEditingAnnouncement(announcement); setShowModal(true); }}
                 onDelete={() => handleDelete(announcement.id)}
-                onTogglePin={() => togglePin(announcement.id)}
+                onTogglePin={() => togglePin(announcement)}
                 getPriorityBadge={getPriorityBadge}
                 getStatusBadge={getStatusBadge}
               />
@@ -195,13 +202,13 @@ const AnnouncementsPage = () => {
         {/* Regular */}
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Toutes les annonces</h3>
-          {filteredAnnouncements.filter(a => !a.pinned).map((announcement) => (
+          {filteredAnnouncements.filter(a => !a.is_pinned).map((announcement) => (
             <AnnouncementCard
               key={announcement.id}
               announcement={announcement}
               onEdit={() => { setEditingAnnouncement(announcement); setShowModal(true); }}
               onDelete={() => handleDelete(announcement.id)}
-              onTogglePin={() => togglePin(announcement.id)}
+              onTogglePin={() => togglePin(announcement)}
               getPriorityBadge={getPriorityBadge}
               getStatusBadge={getStatusBadge}
             />
@@ -214,14 +221,19 @@ const AnnouncementsPage = () => {
         <AnnouncementModal
           announcement={editingAnnouncement}
           onClose={() => { setShowModal(false); setEditingAnnouncement(null); }}
-          onSave={(data) => {
-            if (editingAnnouncement) {
-              setAnnouncements(announcements.map(a => a.id === editingAnnouncement.id ? { ...a, ...data } : a));
-            } else {
-              setAnnouncements([{ ...data, id: Date.now(), views: 0, date: new Date().toISOString().split('T')[0] }, ...announcements]);
+          onSave={async (data) => {
+            try {
+              if (editingAnnouncement) {
+                await announcementAPI.update(editingAnnouncement.id, data);
+              } else {
+                await announcementAPI.create(data);
+              }
+              fetchAnnouncements();
+              setShowModal(false);
+              setEditingAnnouncement(null);
+            } catch (error) {
+              console.error('Error saving announcement:', error);
             }
-            setShowModal(false);
-            setEditingAnnouncement(null);
           }}
         />
       )}
@@ -230,36 +242,32 @@ const AnnouncementsPage = () => {
 };
 
 const AnnouncementCard = ({ announcement, onEdit, onDelete, onTogglePin, getPriorityBadge, getStatusBadge }) => (
-  <div className={`bg-white rounded-xl shadow-sm p-6 ${announcement.pinned ? 'border-l-4 border-orange-500' : ''}`}>
+  <div className={`bg-white rounded-xl shadow-sm p-6 ${announcement.is_pinned ? 'border-l-4 border-orange-500' : ''}`}>
     <div className="flex items-start justify-between">
       <div className="flex-1">
         <div className="flex items-center gap-3 mb-2">
           <h3 className="font-semibold text-gray-800 text-lg">{announcement.title}</h3>
-          {announcement.pinned && <Pin className="w-4 h-4 text-orange-500" />}
+          {announcement.is_pinned && <Pin className="w-4 h-4 text-orange-500" />}
         </div>
         <p className="text-gray-600 mb-4 line-clamp-2">{announcement.content}</p>
         <div className="flex flex-wrap items-center gap-3">
           {getPriorityBadge(announcement.priority)}
-          {getStatusBadge(announcement.status)}
+          {getStatusBadge(announcement.is_published)}
           <span className="flex items-center gap-1 text-sm text-gray-500">
             <Users className="w-4 h-4" />
-            {announcement.audience}
+            {announcement.target_audience === 'all' ? 'Tous' : announcement.target_audience}
           </span>
           <span className="flex items-center gap-1 text-sm text-gray-500">
             <Calendar className="w-4 h-4" />
-            {announcement.date}
-          </span>
-          <span className="flex items-center gap-1 text-sm text-gray-500">
-            <Eye className="w-4 h-4" />
-            {announcement.views} vues
+            {new Date(announcement.created_at).toLocaleDateString()}
           </span>
         </div>
       </div>
       <div className="flex items-center gap-2 ml-4">
         <button
           onClick={onTogglePin}
-          className={`p-2 rounded-lg ${announcement.pinned ? 'bg-orange-100 text-orange-600' : 'hover:bg-gray-100 text-gray-400'}`}
-          title={announcement.pinned ? 'Désépingler' : 'Épingler'}
+          className={`p-2 rounded-lg ${announcement.is_pinned ? 'bg-orange-100 text-orange-600' : 'hover:bg-gray-100 text-gray-400'}`}
+          title={announcement.is_pinned ? 'Désépingler' : 'Épingler'}
         >
           <Pin className="w-4 h-4" />
         </button>
@@ -278,11 +286,19 @@ const AnnouncementModal = ({ announcement, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     title: announcement?.title || '',
     content: announcement?.content || '',
-    audience: announcement?.audience || 'Tous',
+    target_audience: announcement?.target_audience || 'all',
     priority: announcement?.priority || 'medium',
-    status: announcement?.status || 'draft',
-    pinned: announcement?.pinned || false,
+    is_published: announcement?.is_published ?? true,
+    is_pinned: announcement?.is_pinned || false,
   });
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    await onSave(formData);
+    setSaving(false);
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -290,8 +306,8 @@ const AnnouncementModal = ({ announcement, onClose, onSave }) => {
         <h3 className="text-xl font-bold text-gray-800 mb-6">
           {announcement ? 'Modifier l\'annonce' : 'Nouvelle annonce'}
         </h3>
-        
-        <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="space-y-4">
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Titre</label>
             <input
@@ -318,15 +334,14 @@ const AnnouncementModal = ({ announcement, onClose, onSave }) => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Audience</label>
               <select
-                value={formData.audience}
-                onChange={(e) => setFormData({ ...formData, audience: e.target.value })}
+                value={formData.target_audience}
+                onChange={(e) => setFormData({ ...formData, target_audience: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
-                <option value="Tous">Tous</option>
-                <option value="Étudiants">Étudiants</option>
-                <option value="Professeurs">Professeurs</option>
-                <option value="Parents">Parents</option>
-                <option value="Personnel">Personnel</option>
+                <option value="all">Tous</option>
+                <option value="students">Étudiants</option>
+                <option value="teachers">Professeurs</option>
+                <option value="parents">Parents</option>
               </select>
             </div>
             <div>
@@ -344,13 +359,12 @@ const AnnouncementModal = ({ announcement, onClose, onSave }) => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
               <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                value={formData.is_published ? 'published' : 'draft'}
+                onChange={(e) => setFormData({ ...formData, is_published: e.target.value === 'published' })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 <option value="draft">Brouillon</option>
                 <option value="published">Publier</option>
-                <option value="scheduled">Programmer</option>
               </select>
             </div>
           </div>
@@ -359,8 +373,8 @@ const AnnouncementModal = ({ announcement, onClose, onSave }) => {
             <input
               type="checkbox"
               id="pinned"
-              checked={formData.pinned}
-              onChange={(e) => setFormData({ ...formData, pinned: e.target.checked })}
+              checked={formData.is_pinned}
+              onChange={(e) => setFormData({ ...formData, is_pinned: e.target.checked })}
               className="rounded border-gray-300"
             />
             <label htmlFor="pinned" className="text-sm text-gray-700">Épingler cette annonce</label>
@@ -370,7 +384,12 @@ const AnnouncementModal = ({ announcement, onClose, onSave }) => {
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
               Annuler
             </button>
-            <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               {announcement ? 'Mettre à jour' : 'Publier'}
             </button>
           </div>

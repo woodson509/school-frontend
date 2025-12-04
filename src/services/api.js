@@ -1089,6 +1089,16 @@ export const badgeAPI = {
   getStudentBadges: async (studentId) => fetchWithAuth(`/students/${studentId}/badges`),
 };
 
+export const announcementAPI = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/announcements${queryString ? `?${queryString}` : ''}`);
+  },
+  create: async (data) => fetchWithAuth('/announcements', { method: 'POST', body: JSON.stringify(data) }),
+  update: async (id, data) => fetchWithAuth(`/announcements/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: async (id) => fetchWithAuth(`/announcements/${id}`, { method: 'DELETE' }),
+};
+
 export const analyticsAPI = {
   getStats: async () => fetchWithAuth('/analytics/stats'),
   getPredictions: async (studentId) => fetchWithAuth(`/analytics/predictions/${studentId}`),
