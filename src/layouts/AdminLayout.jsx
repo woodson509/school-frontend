@@ -85,7 +85,7 @@ const AdminLayout = () => {
         { label: 'Examens', icon: FileText, path: '/exams' },
         { label: 'Notes', icon: Award, path: '/grades' },
         { label: 'Compétences', icon: Award, path: '/competencies' },
-        { label: 'Bulletins', icon: FileText, path: '/reports' },
+        { label: 'Bulletins', icon: FileText, path: '/report-cards' },
         { label: 'Badges', icon: Award, path: '/badges' },
         { label: 'Analytique', icon: TrendingUp, path: '/analytics' },
         { label: 'Présences', icon: ClipboardList, path: '/attendance' },
@@ -109,12 +109,6 @@ const AdminLayout = () => {
       label: 'Annonces',
       icon: Megaphone,
       path: '/announcements',
-    },
-    {
-      id: 'reports',
-      label: 'Rapports',
-      icon: BarChart3,
-      path: '/reports',
     },
     {
       id: 'settings',

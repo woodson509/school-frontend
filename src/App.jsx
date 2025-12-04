@@ -229,7 +229,8 @@ const AppRoutes = () => {
               <Route path="exams" element={<AdminExamsPage />} />
               <Route path="grades" element={<AdminGradesPage />} />
               <Route path="competencies" element={<AdminCompetenciesPage />} />
-              <Route path="reports" element={<AdminReportsPage />} />
+              <Route path="competencies" element={<AdminCompetenciesPage />} />
+              <Route path="report-cards" element={<AdminReportsPage />} />
               <Route path="badges" element={<AdminBadgesPage />} />
               <Route path="analytics" element={<AdminAnalyticsDashboard />} />
               <Route path="attendance" element={<AdminAttendancePage />} />
@@ -241,9 +242,6 @@ const AppRoutes = () => {
               {/* Calendar & Communication */}
               <Route path="calendar" element={<AdminCalendarPage />} />
               <Route path="announcements" element={<AdminAnnouncementsPage />} />
-
-              {/* Reports */}
-              <Route path="reports" element={<AdminReportsPage />} />
 
               {/* Settings & Tools */}
               <Route path="settings" element={<AdminSettingsPage />} />
