@@ -113,7 +113,14 @@ const GeneralSettings = () => {
   const fetchSchoolInfo = async () => {
     try {
       setLoading(true);
-      const res = await schoolAPI.getSchool();
+      // Get user's school_id from localStorage
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (!user.school_id) {
+        console.log('No school_id found for user');
+        setLoading(false);
+        return;
+      }
+      const res = await schoolAPI.getById(user.school_id);
       if (res.success && res.data) {
         setSchool(res.data);
         setFormData({
@@ -134,9 +141,10 @@ const GeneralSettings = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!school) return;
     setSaving(true);
     try {
-      const res = await schoolAPI.updateSchool(formData);
+      const res = await schoolAPI.update(school.id, formData);
       if (res.success) {
         setSchool(res.data);
         alert('Informations mises à jour avec succès');
