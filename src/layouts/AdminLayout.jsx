@@ -39,6 +39,7 @@ import {
   FileSpreadsheet,
   Megaphone,
   TrendingUp,
+  CheckSquare,
 } from 'lucide-react';
 
 const AdminLayout = () => {
@@ -84,7 +85,7 @@ const AdminLayout = () => {
         { label: 'Classes', icon: School, path: '/classes' },
         { label: 'Examens', icon: FileText, path: '/exams' },
         { label: 'Notes', icon: Award, path: '/grades' },
-        { label: 'Compétences', icon: Award, path: '/competencies' },
+        { label: 'Compétences', icon: CheckSquare, path: '/competencies' },
         { label: 'Bulletins', icon: FileText, path: '/report-cards' },
         { label: 'Badges', icon: Award, path: '/badges' },
         { label: 'Analytique', icon: TrendingUp, path: '/analytics' },

@@ -3,7 +3,8 @@
  * Displays a printable report card
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { X, Printer, BarChart2, Eye, EyeOff } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import {
     BarChart,
@@ -15,13 +16,32 @@ import {
     Legend,
     ResponsiveContainer
 } from 'recharts';
+import api from '../services/api';
+
+const { schoolAPI } = api;
 
 const ReportCardView = ({ reportCard, onClose }) => {
+    const [showChart, setShowChart] = useState(true);
+    const [school, setSchool] = useState(null);
+
+    useEffect(() => {
+        fetchSchoolInfo();
+    }, []);
+
+    const fetchSchoolInfo = async () => {
+        try {
+            const res = await schoolAPI.getSchool();
+            if (res.success) setSchool(res.data);
+        } catch (error) {
+            console.error('Error fetching school info:', error);
+        }
+    };
+
     if (!reportCard) return null;
 
     const {
         student_name,
-        student_code,
+        student_email,
         class_name,
         period_name,
         school_year,
@@ -33,37 +53,69 @@ const ReportCardView = ({ reportCard, onClose }) => {
         appreciation
     } = reportCard;
 
+    const handlePrint = () => {
+        window.print();
+    };
+
+    const handleClose = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+    };
+
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto print:bg-white print:static print:block">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl m-4 print:shadow-none print:m-0 print:w-full print:max-w-none">
+        <div
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto print:bg-white print:static print:block"
+            onClick={handleClose}
+        >
+            <div
+                className="bg-white rounded-xl shadow-xl w-full max-w-4xl m-4 max-h-[90vh] overflow-y-auto print:shadow-none print:m-0 print:w-full print:max-w-none print:max-h-none print:overflow-visible"
+                onClick={(e) => e.stopPropagation()}
+            >
 
                 {/* Toolbar (Hidden when printing) */}
-                <div className="flex justify-between items-center p-4 border-b border-gray-200 print:hidden">
+                <div className="sticky top-0 bg-white z-10 flex justify-between items-center p-4 border-b border-gray-200 print:hidden">
                     <h2 className="text-lg font-bold text-gray-800">Aperçu du Bulletin</h2>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center">
                         <button
-                            onClick={() => window.print()}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                            onClick={() => setShowChart(!showChart)}
+                            className="flex items-center gap-1 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+                            title={showChart ? "Masquer le graphique" : "Afficher le graphique"}
                         >
+                            {showChart ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            Graphique
+                        </button>
+                        <button
+                            onClick={handlePrint}
+                            className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        >
+                            <Printer className="w-4 h-4" />
                             Imprimer
                         </button>
                         <button
-                            onClick={onClose}
-                            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                            onClick={handleClose}
+                            className="flex items-center gap-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
                         >
+                            <X className="w-4 h-4" />
                             Fermer
                         </button>
                     </div>
                 </div>
 
                 {/* Report Card Content */}
-                <div className="p-8 print:p-0" id="report-card-content">
+                <div className="p-8 print:p-4" id="report-card-content">
 
                     {/* Header */}
                     <div className="text-center mb-8 border-b-2 border-gray-800 pb-4">
-                        <h1 className="text-3xl font-bold uppercase tracking-wider mb-2">École Démo Haïti</h1>
-                        <p className="text-gray-600">123 Rue de l'École, Port-au-Prince, Haïti</p>
-                        <p className="text-gray-600">Tél: +509 1234-5678 | Email: contact@ecoledemo.ht</p>
+                        <h1 className="text-3xl font-bold uppercase tracking-wider mb-2">
+                            {school?.name || 'Nom de l\'École'}
+                        </h1>
+                        <p className="text-gray-600">
+                            {school?.address || 'Adresse de l\'école'}
+                        </p>
+                        <p className="text-gray-600">
+                            Tél: {school?.phone || 'N/A'} | Email: {school?.email || 'N/A'}
+                        </p>
                         <h2 className="text-2xl font-bold mt-4 uppercase bg-gray-100 py-2">Bulletin Scolaire</h2>
                     </div>
 
@@ -75,8 +127,8 @@ const ReportCardView = ({ reportCard, onClose }) => {
                                 <span className="uppercase">{student_name}</span>
                             </div>
                             <div className="flex">
-                                <span className="font-bold w-32">Matricule:</span>
-                                <span>{student_code}</span>
+                                <span className="font-bold w-32">Email:</span>
+                                <span>{student_email || 'N/A'}</span>
                             </div>
                         </div>
                         <div className="space-y-2">
@@ -114,7 +166,7 @@ const ReportCardView = ({ reportCard, onClose }) => {
                                     <td className="border border-gray-800 p-2 text-center">{sub.subject_average}</td>
                                     <td className="border border-gray-800 p-2 text-center">{sub.coefficient}</td>
                                     <td className="border border-gray-800 p-2 text-center font-bold">
-                                        {(parseFloat(sub.subject_average) * parseFloat(sub.coefficient)).toFixed(2)}
+                                        {(parseFloat(sub.subject_average || 0) * parseFloat(sub.coefficient || 1)).toFixed(2)}
                                     </td>
                                     <td className="border border-gray-800 p-2 text-center">{sub.rank_in_subject || '-'}</td>
                                     <td className="border border-gray-800 p-2 text-sm italic">{sub.appreciation || ''}</td>
@@ -123,24 +175,26 @@ const ReportCardView = ({ reportCard, onClose }) => {
                         </tbody>
                     </table>
 
-                    {/* Performance Chart */}
-                    <div className="mb-8 h-64 print:h-48">
-                        <h3 className="font-bold mb-4">Analyse de Performance</h3>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart
-                                data={subjects}
-                                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                            >
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="subject_code" />
-                                <YAxis domain={[0, 20]} />
-                                <Tooltip />
-                                <Legend />
-                                <Bar dataKey="subject_average" name="Élève" fill="#2563eb" />
-                                <Bar dataKey="class_subject_average" name="Classe" fill="#9ca3af" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
+                    {/* Performance Chart - Optional */}
+                    {showChart && subjects.length > 0 && (
+                        <div className="mb-8 h-64 print:h-48">
+                            <h3 className="font-bold mb-4">Analyse de Performance</h3>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart
+                                    data={subjects}
+                                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="subject_name" tick={{ fontSize: 10 }} />
+                                    <YAxis domain={[0, 20]} />
+                                    <Tooltip />
+                                    <Legend />
+                                    <Bar dataKey="subject_average" name="Élève" fill="#2563eb" />
+                                    <Bar dataKey="class_subject_average" name="Classe" fill="#9ca3af" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    )}
 
                     {/* Summary */}
                     <div className="flex justify-end mb-8">
@@ -178,11 +232,11 @@ const ReportCardView = ({ reportCard, onClose }) => {
 
                     {/* Footer */}
                     <div className="text-center text-xs text-gray-500 mt-12">
-                        <p>Bulletin généré le {new Date().toLocaleDateString()} via School Management System</p>
+                        <p>Bulletin généré le {new Date().toLocaleDateString('fr-FR')} via School Management System</p>
                         <div className="mt-4 flex justify-center">
                             <div className="p-2 bg-white">
                                 <QRCode
-                                    value={`https://school-app.com/verify/report-card/${reportCard.id || 'demo'}`}
+                                    value={`https://edikahaiti.com/verify/report-card/${reportCard.id || 'demo'}`}
                                     size={64}
                                 />
                             </div>
@@ -197,3 +251,4 @@ const ReportCardView = ({ reportCard, onClose }) => {
 };
 
 export default ReportCardView;
+
