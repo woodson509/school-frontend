@@ -14,7 +14,6 @@ import {
   Trash2,
   Edit2,
   Check,
-  Check,
   X,
   Building2
 } from 'lucide-react';
@@ -91,8 +90,6 @@ const SettingsPage = () => {
       </div>
     </div>
   );
-};
-
 };
 
 // Sub-components
