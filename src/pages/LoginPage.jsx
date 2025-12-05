@@ -35,7 +35,7 @@ const LoginPage = () => {
 
     // Basic validation
     if (!formData.email || !formData.password) {
-      setError('Please fill in all fields');
+      setError('Veuillez remplir tous les champs');
       setIsSubmitting(false);
       return;
     }
@@ -50,11 +50,11 @@ const LoginPage = () => {
         console.log('Redirecting to dashboard...');
         navigate('/dashboard');
       } else {
-        setError(result.error || 'Login failed. Please try again.');
+        setError(result.error || 'Échec de la connexion. Veuillez réessayer.');
       }
     } catch (err) {
       console.error('Login exception:', err);
-      setError(err.message || 'An unexpected error occurred');
+      setError(err.message || 'Une erreur inattendue s\'est produite');
     } finally {
       setIsSubmitting(false);
     }
@@ -68,13 +68,17 @@ const LoginPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
-        {/* Header */}
+        {/* Header with EDIKA Logo */}
         <div className="text-center mb-8">
-          <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-            <LogIn className="w-8 h-8 text-blue-600" />
+          <div className="flex items-center justify-center mb-4">
+            <img
+              src="/edika-logo.png"
+              alt="EDIKA"
+              className="h-16 object-contain"
+            />
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome Back</h1>
-          <p className="text-gray-600">Sign in to your account</p>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Bienvenue</h1>
+          <p className="text-gray-600">Connectez-vous à votre compte</p>
         </div>
 
         {/* Error Alert */}
@@ -92,7 +96,7 @@ const LoginPage = () => {
           {/* Email Field */}
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
+              Adresse e-mail
             </label>
             <input
               type="email"
@@ -100,7 +104,7 @@ const LoginPage = () => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              placeholder="you@example.com"
+              placeholder="vous@exemple.com"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
               disabled={isSubmitting}
             />
@@ -109,7 +113,7 @@ const LoginPage = () => {
           {/* Password Field */}
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-              Password
+              Mot de passe
             </label>
             <div className="relative">
               <input
@@ -140,10 +144,10 @@ const LoginPage = () => {
                 type="checkbox"
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
-              <span className="text-gray-700">Remember me</span>
+              <span className="text-gray-700">Se souvenir de moi</span>
             </label>
             <Link to="/forgot-password" className="text-blue-600 hover:text-blue-700 font-medium">
-              Forgot password?
+              Mot de passe oublié ?
             </Link>
           </div>
 
@@ -156,12 +160,12 @@ const LoginPage = () => {
             {isSubmitting ? (
               <>
                 <Loader className="w-5 h-5 animate-spin" />
-                Signing in...
+                Connexion en cours...
               </>
             ) : (
               <>
                 <LogIn className="w-5 h-5" />
-                Sign In
+                Se connecter
               </>
             )}
           </button>
@@ -169,7 +173,7 @@ const LoginPage = () => {
 
         {/* Demo Accounts - Development Only */}
         <div className="mt-8 pt-6 border-t border-gray-200">
-          <p className="text-sm text-gray-600 text-center mb-3">Quick login (demo):</p>
+          <p className="text-sm text-gray-600 text-center mb-3">Connexion rapide (démo) :</p>
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => quickLogin('admin@example.com', 'admin123')}
@@ -183,14 +187,14 @@ const LoginPage = () => {
               className="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded transition-colors"
               disabled={isSubmitting}
             >
-              Teacher
+              Enseignant
             </button>
             <button
               onClick={() => quickLogin('student@example.com', 'student123')}
               className="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded transition-colors"
               disabled={isSubmitting}
             >
-              Student
+              Élève
             </button>
             <button
               onClick={() => quickLogin('agent@example.com', 'agent123')}
@@ -205,9 +209,9 @@ const LoginPage = () => {
         {/* Register Link */}
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
-            Don't have an account?{' '}
+            Vous n'avez pas de compte ?{' '}
             <Link to="/register" className="text-blue-600 hover:text-blue-700 font-semibold">
-              Sign up
+              S'inscrire
             </Link>
           </p>
         </div>
@@ -217,7 +221,7 @@ const LoginPage = () => {
       {!navigator.onLine && (
         <div className="fixed bottom-4 right-4 bg-orange-100 border-l-4 border-orange-500 p-4 rounded shadow-lg">
           <p className="text-sm text-orange-800 font-medium">
-            ⚠️ You are offline
+            ⚠️ Vous êtes hors ligne
           </p>
         </div>
       )}
@@ -226,3 +230,4 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+
