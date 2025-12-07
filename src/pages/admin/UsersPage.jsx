@@ -98,6 +98,8 @@ const UsersPage = () => {
 
             if (error.message?.includes('User already exists') || error.response?.data?.message?.includes('User already exists')) {
                 errorMessage = 'Cet email est déjà utilisé par un autre utilisateur.';
+            } else if (error.response?.status === 500) {
+                errorMessage = 'Erreur serveur interne. Veuillez contacter le support technique. (Détails: ' + (error.response?.data?.message || error.message) + ')';
             } else if (error.message) {
                 errorMessage = `Erreur: ${error.message}`;
             }
