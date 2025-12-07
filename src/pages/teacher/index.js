@@ -9,6 +9,9 @@ export { default as TeacherDashboardPage } from './DashboardPage';
 // Teaching
 export { default as TeacherClassesPage } from './ClassesPage';
 export { default as TeacherCoursesPage } from './CoursesPage';
+export { default as TeacherCourseDetailsPage } from './CourseDetailsPage';
+export { default as TeacherSubjectsPage } from './SubjectsPage';
+export { default as TeacherCurriculaPage } from './CurriculaPage';
 export { default as TeacherSchedulePage } from './SchedulePage';
 export { default as TeacherPlannerPage } from './PlannerPage';
 export { default as TeacherLibraryPage } from './LibraryPage';
@@ -21,6 +24,8 @@ export { default as TeacherQuizBuilderPage } from './QuizBuilderPage';
 // Evaluation
 export { default as TeacherGradingPage } from './GradingPage';
 export { default as TeacherGradesPage } from './GradesPage';
+export { default as TeacherCompetenciesPage } from './CompetenciesPage';
+export { default as TeacherBadgesPage } from './BadgesPage';
 export { default as TeacherAttendancePage } from './AttendancePage';
 export { default as TeacherReportsPage } from './ReportsPage';
 

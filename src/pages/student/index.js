@@ -8,10 +8,13 @@ export { default as StudentDashboardPage } from './DashboardPage';
 
 // Learning
 export { default as StudentCoursesPage } from './CoursesPage';
+export { default as StudentCourseDetailsPage } from './CourseDetailsPage';
 export { default as StudentSchedulePage } from './SchedulePage';
 export { default as StudentAssignmentsPage } from './AssignmentsPage';
 export { default as StudentExamsPage } from './ExamsPage';
 export { default as StudentGradesPage } from './GradesPage';
+export { default as StudentCompetenciesPage } from './CompetenciesPage';
+export { default as StudentBadgesPage } from './BadgesPage';
 export { default as StudentAttendancePage } from './AttendancePage';
 
 // Study Tools

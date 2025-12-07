@@ -37,6 +37,7 @@ import {
   Share2,
   Lightbulb,
   BookMarked,
+  Award,
 } from 'lucide-react';
 
 const TeacherLayout = () => {
@@ -60,6 +61,8 @@ const TeacherLayout = () => {
       icon: BookOpen,
       children: [
         { path: '/courses', label: 'Mes cours', icon: BookOpen },
+        { path: '/subjects', label: 'Matières', icon: BookMarked },
+        { path: '/curricula', label: 'Programmes', icon: Layers },
         { path: '/classes', label: 'Mes classes', icon: Users },
         { path: '/schedule', label: 'Emploi du temps', icon: Calendar },
         { path: '/lesson-planner', label: 'Planificateur', icon: Target },
@@ -74,6 +77,8 @@ const TeacherLayout = () => {
         { path: '/assignments', label: 'Devoirs', icon: FileText },
         { path: '/grading', label: 'Correction', icon: FileCheck },
         { path: '/exams', label: 'Examens', icon: ClipboardList },
+        { path: '/competencies', label: 'Compétences', icon: Target },
+        { path: '/badges', label: 'Badges', icon: Award },
         { path: '/quiz-builder', label: 'Créateur de quiz', icon: Lightbulb },
         { path: '/question-bank', label: 'Banque de questions', icon: Database },
         { path: '/grades', label: 'Notes', icon: BarChart3 },

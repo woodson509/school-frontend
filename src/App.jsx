@@ -58,6 +58,9 @@ const SuperAdminBackupPage = lazy(() => import('./pages/superadmin/BackupPage'))
 // Lazy imports for student pages
 const StudentDashboardPage = lazy(() => import('./pages/student/DashboardPage'));
 const StudentCoursesPage = lazy(() => import('./pages/student/CoursesPage'));
+const StudentCourseDetailsPage = lazy(() => import('./pages/student/CourseDetailsPage'));
+const StudentCompetenciesPage = lazy(() => import('./pages/student/CompetenciesPage'));
+const StudentBadgesPage = lazy(() => import('./pages/student/BadgesPage'));
 const StudentSchedulePage = lazy(() => import('./pages/student/SchedulePage'));
 const StudentAssignmentsPage = lazy(() => import('./pages/student/AssignmentsPage'));
 const StudentExamsPage = lazy(() => import('./pages/student/ExamsPage'));
@@ -106,6 +109,11 @@ const TeacherPortfolioPage = lazy(() => import('./pages/teacher/PortfolioPage'))
 const TeacherHelpPage = lazy(() => import('./pages/teacher/HelpPage'));
 const TeacherProfilePage = lazy(() => import('./pages/teacher/ProfilePage'));
 const TeacherCalendarPage = lazy(() => import('./pages/teacher/CalendarPage'));
+const TeacherSubjectsPage = lazy(() => import('./pages/teacher/SubjectsPage'));
+const TeacherCurriculaPage = lazy(() => import('./pages/teacher/CurriculaPage'));
+const TeacherCourseDetailsPage = lazy(() => import('./pages/teacher/CourseDetailsPage'));
+const TeacherCompetenciesPage = lazy(() => import('./pages/teacher/CompetenciesPage'));
+const TeacherBadgesPage = lazy(() => import('./pages/teacher/BadgesPage'));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -270,6 +278,9 @@ const AppRoutes = () => {
               {/* Teaching Routes */}
               <Route path="classes" element={<TeacherClassesPage />} />
               <Route path="courses" element={<TeacherCoursesPage />} />
+              <Route path="courses/:id" element={<TeacherCourseDetailsPage />} />
+              <Route path="subjects" element={<TeacherSubjectsPage />} />
+              <Route path="curricula" element={<TeacherCurriculaPage />} />
               <Route path="schedule" element={<TeacherSchedulePage />} />
               <Route path="planner" element={<TeacherPlannerPage />} />
               <Route path="lesson-planner" element={<TeacherLessonPlannerPage />} />
@@ -286,6 +297,8 @@ const AppRoutes = () => {
               {/* Evaluation Routes */}
               <Route path="grading" element={<TeacherGradingPage />} />
               <Route path="grades" element={<TeacherGradesPage />} />
+              <Route path="competencies" element={<TeacherCompetenciesPage />} />
+              <Route path="badges" element={<TeacherBadgesPage />} />
               <Route path="attendance" element={<TeacherAttendancePage />} />
               <Route path="reports" element={<TeacherReportsPage />} />
 
@@ -325,6 +338,9 @@ const AppRoutes = () => {
 
               {/* Learning Routes */}
               <Route path="courses" element={<StudentCoursesPage />} />
+              <Route path="courses/:id" element={<StudentCourseDetailsPage />} />
+              <Route path="competencies" element={<StudentCompetenciesPage />} />
+              <Route path="badges" element={<StudentBadgesPage />} />
               <Route path="schedule" element={<StudentSchedulePage />} />
               <Route path="assignments" element={<StudentAssignmentsPage />} />
               <Route path="exams" element={<StudentExamsPage />} />

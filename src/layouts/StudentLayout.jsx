@@ -30,6 +30,7 @@ import {
   Users,
   PenTool,
   Lightbulb,
+  CheckCircle,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -56,6 +57,8 @@ const StudentLayout = () => {
         { name: 'Mes devoirs', path: '/assignments', icon: ClipboardList },
         { name: 'Mes examens', path: '/exams', icon: FileText },
         { name: 'Mes notes', path: '/grades', icon: BarChart3 },
+        { name: 'Compétences', path: '/competencies', icon: Target },
+        { name: 'Mes badges', path: '/badges', icon: Award },
         { name: 'Mes présences', path: '/attendance', icon: Clock },
       ],
     },
