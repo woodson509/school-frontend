@@ -16,6 +16,7 @@ import AdminLayout from './layouts/AdminLayout';
 import SuperAdminLayout from './layouts/SuperAdminLayout';
 import StudentLayout from './layouts/StudentLayout';
 import TeacherLayout from './layouts/TeacherLayout';
+import AgentLayout from './layouts/AgentLayout';
 
 // Regular imports for critical pages
 import LoginPage from './pages/LoginPage';
@@ -101,6 +102,9 @@ const TeacherAttendancePage = lazy(() => import('./pages/teacher/AttendancePage'
 const TeacherReportsPage = lazy(() => import('./pages/teacher/ReportsPage'));
 const TeacherStudentsPage = lazy(() => import('./pages/teacher/StudentsPage'));
 const TeacherGroupsPage = lazy(() => import('./pages/teacher/GroupsPage'));
+
+// Lazy imports for agent pages
+const AgentDashboardPage = lazy(() => import('./pages/agent/DashboardPage'));
 const TeacherClassAnalyticsPage = lazy(() => import('./pages/teacher/ClassAnalyticsPage'));
 const TeacherFeedbackPage = lazy(() => import('./pages/teacher/FeedbackPage'));
 const TeacherMessagesPage = lazy(() => import('./pages/teacher/MessagesPage'));
@@ -158,7 +162,7 @@ const PublicRoute = ({ children }) => {
 
 // App Routes Component
 const AppRoutes = () => {
-  const { isSuperAdmin, isAdmin, isTeacher, loading, isAuthenticated } = useAuth();
+  const { isSuperAdmin, isAdmin, isTeacher, isAgent, loading, isAuthenticated } = useAuth();
 
   // DEBUG: Log role detection
   console.log('🔍 AppRoutes - Role Detection:');
@@ -166,6 +170,7 @@ const AppRoutes = () => {
   console.log('  isSuperAdmin:', isSuperAdmin);
   console.log('  isAdmin:', isAdmin);
   console.log('  isTeacher:', isTeacher);
+  console.log('  isAgent:', isAgent);
 
   // Show loading while checking auth
   if (loading) {
@@ -320,6 +325,23 @@ const AppRoutes = () => {
 
               {/* Exam route */}
               <Route path="exams/:examId" element={<ExamPage />} />
+            </Route>
+          ) : isAgent ? (
+            /* Agent Routes */
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingFallback />}>
+                    <AgentLayout />
+                  </Suspense>
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="dashboard" element={<AgentDashboardPage />} />
+              <Route path="sales" element={<div className="p-8 text-center text-gray-500">Page des ventes en construction</div>} />
+              <Route path="profile" element={<div className="p-8 text-center text-gray-500">Profil agent en construction</div>} />
             </Route>
           ) : (
             /* Student Routes */
