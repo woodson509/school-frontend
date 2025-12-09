@@ -96,11 +96,17 @@ const TeacherCoursesPage = () => {
         return;
       }
 
+      // Convert format for API
       const courseData = {
         ...formData,
+        code: formData.code.toUpperCase().trim(), // Ensure uppercase code
         school_id: user.school_id,
         teacher_id: user.id
       };
+
+      // Clean up optional fields
+      if (!courseData.class_id) delete courseData.class_id;
+      if (!courseData.credits) delete courseData.credits;
 
       const response = await courseAPI.create(courseData);
 
@@ -118,7 +124,7 @@ const TeacherCoursesPage = () => {
       }
     } catch (error) {
       console.error('Error creating course:', error);
-      alert(error.message || 'Erreur lors de la création du cours');
+      alert('Erreur: ' + (error.message || 'Validation échouée. Vérifiez le code (Majuscules, Chiffres, Tirets uniquement).'));
     }
   };
 
@@ -308,8 +314,8 @@ const TeacherCoursesPage = () => {
 
       {/* Create Course Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md relative z-[101]">
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <h2 className="text-xl font-bold text-gray-800">Nouveau cours</h2>
               <button
@@ -338,11 +344,12 @@ const TeacherCoursesPage = () => {
                 <input
                   type="text"
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 uppercase"
                   placeholder="ex: MATH-6A"
                   value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
                 />
+                <p className="text-xs text-gray-500 mt-1">Majuscules, chiffres et tirets uniquement</p>
               </div>
 
               <div>
