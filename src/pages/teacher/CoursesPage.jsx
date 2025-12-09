@@ -16,9 +16,10 @@ import {
   FileText,
   Settings,
   Calendar,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { courseAPI } from '../../services/api';
+import { courseAPI, classAPI } from '../../services/api';
 
 const TeacherCoursesPage = () => {
   const { user } = useAuth();
@@ -26,45 +27,103 @@ const TeacherCoursesPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        if (!user?.id) return;
+  // Create Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [availableClasses, setAvailableClasses] = useState([]);
+  const [formData, setFormData] = useState({
+    title: '',
+    code: '',
+    description: '',
+    class_id: '',
+    credits: 0
+  });
 
-        const response = await courseAPI.getAll({ teacher_id: user.id });
-        if (response.success) {
-          // Transform backend data to match UI needs
-          // Note: Backend might not return all extended analytics yet, so we use fallbacks
-          const mappedCourses = response.data.map(course => ({
-            id: course.id,
-            name: course.title,
-            code: course.code,
-            class: course.class_name || 'N/A',
-            students: course.student_count || 0, // Assuming api returns this or we default to 0
-            lessonsCompleted: course.completed_lessons || 0,
-            totalLessons: course.total_lessons || 12, // Default or real
-            nextLesson: course.next_lesson_title || 'Non planifié',
-            schedule: course.schedule_summary || 'Horaire non défini',
-            averageScore: course.average_score ? parseFloat(course.average_score).toFixed(1) : '-',
-            color: getRandomColor(course.id), // Helper for color
-            description: course.description
-          }));
-          setCourses(mappedCourses);
-        }
-      } catch (error) {
-        console.error('Error fetching courses:', error);
-      } finally {
-        setLoading(false);
+  const fetchCourses = async () => {
+    try {
+      if (!user?.id) return;
+
+      const response = await courseAPI.getAll({ teacher_id: user.id });
+      if (response.success) {
+        const mappedCourses = response.data.map(course => ({
+          id: course.id,
+          name: course.title,
+          code: course.code,
+          class: course.class_name || 'N/A',
+          students: course.student_count || 0,
+          lessonsCompleted: course.completed_lessons || 0,
+          totalLessons: course.total_lessons || 12,
+          nextLesson: course.next_lesson_title || 'Non planifié',
+          schedule: course.schedule_summary || 'Horaire non défini',
+          averageScore: course.average_score ? parseFloat(course.average_score).toFixed(1) : '-',
+          color: getRandomColor(course.id),
+          description: course.description
+        }));
+        setCourses(mappedCourses);
       }
-    };
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchCourses();
   }, [user]);
 
-  // Helper to generate consistent colors based on string
+  // Fetch classes when modal opens
+  useEffect(() => {
+    if (isModalOpen && user?.school_id) {
+      const fetchClasses = async () => {
+        try {
+          const response = await classAPI.getAll({ school_id: user.school_id });
+          if (response.success) {
+            setAvailableClasses(response.data);
+          }
+        } catch (error) {
+          console.error('Error fetching classes:', error);
+        }
+      };
+      fetchClasses();
+    }
+  }, [isModalOpen, user?.school_id]);
+
+  const handleCreateCourse = async (e) => {
+    e.preventDefault();
+    try {
+      if (!user?.school_id) {
+        alert("Erreur: Vous n'êtes associé à aucune école.");
+        return;
+      }
+
+      const courseData = {
+        ...formData,
+        school_id: user.school_id,
+        teacher_id: user.id
+      };
+
+      const response = await courseAPI.create(courseData);
+
+      if (response.success) {
+        alert('Cours créé avec succès !');
+        setIsModalOpen(false);
+        setFormData({
+          title: '',
+          code: '',
+          description: '',
+          class_id: '',
+          credits: 0
+        });
+        fetchCourses(); // Refresh list
+      }
+    } catch (error) {
+      console.error('Error creating course:', error);
+      alert(error.message || 'Erreur lors de la création du cours');
+    }
+  };
+
   const getRandomColor = (id) => {
     const colors = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EC4899', '#6366F1'];
-    // Simple hash
     let hash = 0;
     const str = String(id);
     for (let i = 0; i < str.length; i++) {
@@ -100,7 +159,10 @@ const TeacherCoursesPage = () => {
           <h1 className="text-2xl font-bold text-gray-800">Mes cours</h1>
           <p className="text-gray-500">{courses.length} cours • {totalStudents} élèves</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+        >
           <Plus className="w-4 h-4" />
           Nouveau contenu
         </button>
@@ -192,7 +254,6 @@ const TeacherCoursesPage = () => {
                   </div>
                 </div>
 
-                {/* Progress */}
                 <div className="mb-4">
                   <div className="flex items-center justify-between text-sm mb-1">
                     <span className="text-gray-500">Progression</span>
@@ -211,25 +272,21 @@ const TeacherCoursesPage = () => {
                   </div>
                 </div>
 
-                {/* Next Lesson */}
                 <div className="p-3 bg-gray-50 rounded-lg mb-4">
                   <p className="text-xs text-gray-400 mb-1">Prochaine leçon</p>
                   <p className="text-sm font-medium text-gray-800">{course.nextLesson}</p>
                 </div>
 
-                {/* Schedule */}
                 <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
                   <Calendar className="w-4 h-4" />
                   {course.schedule}
                 </div>
 
-                {/* Average Score */}
                 <div className="flex items-center justify-between p-3 bg-indigo-50 rounded-lg">
                   <span className="text-sm text-indigo-700">Moyenne classe</span>
                   <span className="font-bold text-indigo-600">{course.averageScore !== '-' ? `${course.averageScore}/20` : '-'}</span>
                 </div>
 
-                {/* Actions */}
                 <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
                   <button className="flex-1 flex items-center justify-center gap-2 py-2 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg">
                     <FileText className="w-4 h-4" />
@@ -246,6 +303,90 @@ const TeacherCoursesPage = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Create Course Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <h2 className="text-xl font-bold text-gray-800">Nouveau cours</h2>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateCourse} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Titre du cours</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="ex: Mathématiques"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Code du cours</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="ex: MATH-6A"
+                  value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Classe associée</label>
+                <select
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  value={formData.class_id}
+                  onChange={(e) => setFormData({ ...formData, class_id: e.target.value })}
+                >
+                  <option value="">Sélectionner une classe (Optionnel)</option>
+                  {availableClasses.map(cls => (
+                    <option key={cls.id} value={cls.id}>{cls.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  rows="3"
+                  placeholder="Description du cours..."
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  Créer le cours
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
