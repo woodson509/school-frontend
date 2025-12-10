@@ -6,21 +6,25 @@
 import { useState, useEffect } from 'react';
 import { X, UserPlus, Search } from 'lucide-react';
 import { userAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 const EnrollmentFormModal = ({ courseId, currentEnrollments, onClose, onSave }) => {
+    const { user } = useAuth();
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedStudentId, setSelectedStudentId] = useState(null);
 
     useEffect(() => {
-        fetchStudents();
-    }, []);
+        if (user?.school_id) {
+            fetchStudents();
+        }
+    }, [user]);
 
     const fetchStudents = async () => {
         try {
             setLoading(true);
-            const response = await userAPI.getAll({ role: 'student' });
+            const response = await userAPI.getAll({ role: 'student', school_id: user.school_id });
             if (response.success) {
                 // Filter out students already enrolled
                 const enrolledIds = new Set(currentEnrollments.map(e => e.student_id));
@@ -51,8 +55,8 @@ const EnrollmentFormModal = ({ courseId, currentEnrollments, onClose, onSave }) 
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col relative z-[101]">
                 <div className="flex items-center justify-between p-6 border-b border-gray-200">
                     <h2 className="text-xl font-bold text-gray-800">
                         Inscrire un étudiant
@@ -129,8 +133,8 @@ const EnrollmentFormModal = ({ courseId, currentEnrollments, onClose, onSave }) 
                         onClick={handleSubmit}
                         disabled={!selectedStudentId}
                         className={`px-4 py-2 rounded-lg text-white flex items-center gap-2 transition-colors ${selectedStudentId
-                                ? 'bg-blue-600 hover:bg-blue-700'
-                                : 'bg-gray-300 cursor-not-allowed'
+                            ? 'bg-blue-600 hover:bg-blue-700'
+                            : 'bg-gray-300 cursor-not-allowed'
                             }`}
                     >
                         <UserPlus className="w-4 h-4" />
