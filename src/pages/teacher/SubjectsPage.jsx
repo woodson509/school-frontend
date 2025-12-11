@@ -30,8 +30,6 @@ const TeacherSubjectsPage = () => {
                 // Map API data to frontend format
                 const mappedSubjects = response.data.map(subject => ({
                     ...subject,
-                    courses: 0, // TODO: Fetch real count
-                    teachers: 0, // TODO: Fetch real count
                     color: subject.color || '#3B82F6' // Default color if not in DB
                 }));
                 setSubjects(mappedSubjects);
@@ -102,7 +100,7 @@ const TeacherSubjectsPage = () => {
                             <p className="text-sm text-gray-600 mb-4 line-clamp-2">{subject.description}</p>
 
                             <div className="flex items-center justify-between text-sm">
-                                <span className="text-gray-500">{subject.courses || 0} cours</span>
+                                {/* <span className="text-gray-500">{subject.courses || 0} cours</span> */}
                             </div>
                         </div>
                     </div>
