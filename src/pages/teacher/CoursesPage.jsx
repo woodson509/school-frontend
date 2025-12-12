@@ -20,7 +20,7 @@ import {
   X
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { courseAPI, classAPI } from '../../services/api';
+import { courseAPI, classAPI, subjectAPI } from '../../services/api';
 
 const TeacherCoursesPage = () => {
   const { user } = useAuth();
@@ -32,11 +32,13 @@ const TeacherCoursesPage = () => {
   // Create Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [availableClasses, setAvailableClasses] = useState([]);
+  const [availableSubjects, setAvailableSubjects] = useState([]);
   const [formData, setFormData] = useState({
     title: '',
     code: '',
     description: '',
     class_id: '',
+    subject_id: '',
     credits: 0
   });
 
@@ -74,19 +76,27 @@ const TeacherCoursesPage = () => {
   }, [user]);
 
   // Fetch classes when modal opens
+  // Fetch classes and subjects when modal opens
   useEffect(() => {
     if (isModalOpen && user?.school_id) {
-      const fetchClasses = async () => {
+      const fetchData = async () => {
         try {
-          const response = await classAPI.getAll({ school_id: user.school_id });
-          if (response.success) {
-            setAvailableClasses(response.data);
+          const [classesRes, subjectsRes] = await Promise.all([
+            classAPI.getAll({ school_id: user.school_id }),
+            subjectAPI.getAll()
+          ]);
+
+          if (classesRes.success) {
+            setAvailableClasses(classesRes.data);
+          }
+          if (subjectsRes.success) {
+            setAvailableSubjects(subjectsRes.data);
           }
         } catch (error) {
-          console.error('Error fetching classes:', error);
+          console.error('Error fetching form data:', error);
         }
       };
-      fetchClasses();
+      fetchData();
     }
   }, [isModalOpen, user?.school_id]);
 
@@ -108,6 +118,7 @@ const TeacherCoursesPage = () => {
 
       // Clean up optional fields
       if (!courseData.class_id) delete courseData.class_id;
+      if (!courseData.subject_id) delete courseData.subject_id;
       if (!courseData.credits) delete courseData.credits;
 
       const response = await courseAPI.create(courseData);
@@ -119,7 +130,9 @@ const TeacherCoursesPage = () => {
           title: '',
           code: '',
           description: '',
+          description: '',
           class_id: '',
+          subject_id: '',
           credits: 0
         });
         fetchCourses(); // Refresh list
@@ -390,6 +403,20 @@ const TeacherCoursesPage = () => {
                   <option value="">Sélectionner une classe (Optionnel)</option>
                   {availableClasses.map(cls => (
                     <option key={cls.id} value={cls.id}>{cls.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Matière / Sujet</label>
+                <select
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  value={formData.subject_id}
+                  onChange={(e) => setFormData({ ...formData, subject_id: e.target.value })}
+                >
+                  <option value="">Sélectionner une matière</option>
+                  {availableSubjects.map(sub => (
+                    <option key={sub.id} value={sub.id}>{sub.name} ({sub.code})</option>
                   ))}
                 </select>
               </div>
