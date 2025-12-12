@@ -51,13 +51,27 @@ const TeacherAssignmentsPage = () => {
       ]);
 
       if (assignmentsRes.success) {
-        setAssignments(assignmentsRes.data.map(a => ({
-          ...a,
-          dueDate: new Date(a.due_date).toLocaleDateString('fr-FR'),
-          class: a.class_name || a.course_code || 'N/A', // Display class name if available, else course code
-          submitted: 0, // TODO: Fetch submissions count
-          total: 0 // TODO: Fetch total students
-        })));
+        const now = new Date();
+        setAssignments(assignmentsRes.data.map(a => {
+          // Derive status from is_published and due_date
+          let status = 'draft';
+          const dueDate = new Date(a.due_date);
+          if (a.is_published) {
+            if (dueDate < now) {
+              status = 'completed'; // Past due date
+            } else {
+              status = 'active'; // Published and not yet due
+            }
+          }
+          return {
+            ...a,
+            status,
+            dueDate: dueDate.toLocaleDateString('fr-FR'),
+            class: a.class_name || a.course_code || a.course_title || 'N/A',
+            submitted: 0, // TODO: Fetch submissions count
+            total: 0 // TODO: Fetch total students
+          };
+        }));
       }
 
       if (coursesRes.success) {
@@ -126,6 +140,17 @@ const TeacherAssignmentsPage = () => {
     } catch (error) {
       console.error('Error creating assignment:', error);
       alert('Erreur lors de la création du devoir');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce devoir ?')) return;
+    try {
+      await assignmentAPI.delete(id);
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting assignment:', error);
+      alert('Erreur lors de la suppression');
     }
   };
 
@@ -277,16 +302,32 @@ const TeacherAssignmentsPage = () => {
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-end gap-2">
-                    <button className="p-2 hover:bg-gray-100 rounded-lg" title="Voir">
+                    <button
+                      onClick={() => alert('Fonctionnalité "Voir" bientôt disponible')}
+                      className="p-2 hover:bg-gray-100 rounded-lg"
+                      title="Voir"
+                    >
                       <Eye className="w-4 h-4 text-gray-600" />
                     </button>
-                    <button className="p-2 hover:bg-gray-100 rounded-lg" title="Modifier">
+                    <button
+                      onClick={() => alert('Fonctionnalité "Modifier" bientôt disponible')}
+                      className="p-2 hover:bg-gray-100 rounded-lg"
+                      title="Modifier"
+                    >
                       <Edit className="w-4 h-4 text-gray-600" />
                     </button>
-                    <button className="p-2 hover:bg-gray-100 rounded-lg" title="Dupliquer">
+                    <button
+                      onClick={() => alert('Fonctionnalité "Dupliquer" bientôt disponible')}
+                      className="p-2 hover:bg-gray-100 rounded-lg"
+                      title="Dupliquer"
+                    >
                       <Copy className="w-4 h-4 text-gray-600" />
                     </button>
-                    <button className="p-2 hover:bg-gray-100 rounded-lg" title="Supprimer">
+                    <button
+                      onClick={() => handleDelete(assignment.id)}
+                      className="p-2 hover:bg-gray-100 rounded-lg"
+                      title="Supprimer"
+                    >
                       <Trash2 className="w-4 h-4 text-red-500" />
                     </button>
                   </div>
