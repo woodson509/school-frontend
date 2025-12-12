@@ -3,28 +3,70 @@
  * View and manage students
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Users, Search, Filter, Mail, Phone, Download, Eye, TrendingUp } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { userAPI, classAPI } from '../../services/api';
 
 const TeacherStudentsPage = () => {
+  const { user } = useAuth();
   const [selectedClass, setSelectedClass] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [students, setStudents] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const students = [
-    { id: 1, name: 'Jean Pierre', class: '6ème A', email: 'jean.p@example.com', phone: '+509 1234-5678', average: 15.5, attendance: 95, status: 'active' },
-    { id: 2, name: 'Marie Claire', class: '6ème A', email: 'marie.c@example.com', phone: '+509 1234-5679', average: 16.2, attendance: 98, status: 'active' },
-    { id: 3, name: 'Paul Martin', class: '6ème B', email: 'paul.m@example.com', phone: '+509 1234-5680', average: 13.8, attendance: 89, status: 'active' },
-    { id: 4, name: 'Sophie Durand', class: '5ème A', email: 'sophie.d@example.com', phone: '+509 1234-5681', average: 17.1, attendance: 100, status: 'active' },
-    { id: 5, name: 'Luc Bernard', class: '5ème B', email: 'luc.b@example.com', phone: '+509 1234-5682', average: 14.3, attendance: 92, status: 'active' },
-  ];
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [studentsRes, classesRes] = await Promise.all([
+        userAPI.getAll({ role: 'student' }),
+        classAPI.getAll()
+      ]);
 
-  const classes = ['6ème A', '6ème B', '5ème A', '5ème B', '4ème C'];
+      if (studentsRes.success) {
+        setStudents(studentsRes.data.map(s => ({
+          id: s.id,
+          name: s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim() || s.email,
+          email: s.email,
+          phone: s.phone || 'N/A',
+          class: s.class_name || 'Non assigné',
+          class_id: s.class_id,
+          average: s.average || '--',
+          attendance: s.attendance_rate || '--',
+          status: s.status || 'active'
+        })));
+      }
+
+      if (classesRes.success) {
+        setClasses(classesRes.data.map(c => c.name));
+      }
+    } catch (error) {
+      console.error('Error fetching students:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
 
   const filteredStudents = students.filter(s => {
     const matchesClass = selectedClass === 'all' || s.class === selectedClass;
     const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesClass && matchesSearch;
   });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -99,20 +141,18 @@ const TeacherStudentsPage = () => {
                   </div>
                 </td>
                 <td className="px-6 py-4 text-center">
-                  <span className={`text-lg font-semibold ${
-                    student.average >= 16 ? 'text-green-600' :
+                  <span className={`text-lg font-semibold ${student.average >= 16 ? 'text-green-600' :
                     student.average >= 14 ? 'text-blue-600' :
-                    student.average >= 12 ? 'text-orange-600' : 'text-red-600'
-                  }`}>
+                      student.average >= 12 ? 'text-orange-600' : 'text-red-600'
+                    }`}>
                     {student.average}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-center">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    student.attendance >= 95 ? 'bg-green-100 text-green-700' :
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${student.attendance >= 95 ? 'bg-green-100 text-green-700' :
                     student.attendance >= 90 ? 'bg-blue-100 text-blue-700' :
-                    'bg-orange-100 text-orange-700'
-                  }`}>
+                      'bg-orange-100 text-orange-700'
+                    }`}>
                     {student.attendance}%
                   </span>
                 </td>
