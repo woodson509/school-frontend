@@ -139,7 +139,16 @@ const TeacherCoursesPage = () => {
       }
     } catch (error) {
       console.error('Error creating course:', error);
-      alert('Erreur: ' + (error.message || 'Validation échouée. Vérifiez le code (Majuscules, Chiffres, Tirets uniquement).'));
+
+      // Extract specific validation message if available
+      let errorMessage = error.message || 'Validation échouée';
+      if (error.response && error.response.data && error.response.data.errors) {
+        errorMessage = error.response.data.errors.map(e => e.message).join('\n');
+      } else if (error.msg) {
+        errorMessage = error.msg;
+      }
+
+      alert('Erreur:\n' + errorMessage);
     }
   };
 

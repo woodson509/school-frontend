@@ -727,6 +727,11 @@ export const enrollmentAPI = {
  * Assignment APIs
  */
 export const assignmentAPI = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/assignments${queryString ? `?${queryString}` : ''}`);
+  },
+
   getByCourse: async (courseId) => {
     return fetchWithAuth(`/courses/${courseId}/assignments`);
   },

@@ -19,39 +19,62 @@ import {
   Search,
   Filter,
   ChevronDown,
+  BookOpen,
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { assignmentAPI, courseAPI } from '../../services/api';
 
 const TeacherAssignmentsPage = () => {
+  const { user } = useAuth();
   const [assignments, setAssignments] = useState([]);
+  const [courses, setCourses] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
 
   const [newAssignment, setNewAssignment] = useState({
     title: '',
-    class: '',
+    course_id: '',
     description: '',
-    dueDate: '',
-    dueTime: '23:59',
+    due_date: '',
+    due_time: '23:59',
     points: 20,
-    attachments: [],
+    is_published: false
   });
 
-  useEffect(() => {
-    const sampleAssignments = [
-      { id: 1, title: 'Exercices Chapitre 5 - Intégrales', class: '6ème A', dueDate: '17/12/2024', points: 20, submitted: 28, total: 32, status: 'active', createdAt: '10/12/2024' },
-      { id: 2, title: 'TP Géométrie - Figures', class: '5ème B', dueDate: '18/12/2024', points: 15, submitted: 15, total: 28, status: 'active', createdAt: '11/12/2024' },
-      { id: 3, title: 'QCM Algèbre', class: '4ème A', dueDate: '15/12/2024', points: 10, submitted: 30, total: 30, status: 'grading', createdAt: '08/12/2024' },
-      { id: 4, title: 'Dissertation - Fonctions', class: '3ème C', dueDate: '20/12/2024', points: 40, submitted: 0, total: 34, status: 'draft', createdAt: '14/12/2024' },
-      { id: 5, title: 'Exercices Statistiques', class: '6ème A', dueDate: '10/12/2024', points: 20, submitted: 32, total: 32, status: 'completed', createdAt: '03/12/2024' },
-      { id: 6, title: 'Problèmes Probabilités', class: '2nde D', dueDate: '19/12/2024', points: 25, submitted: 12, total: 32, status: 'active', createdAt: '12/12/2024' },
-    ];
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [assignmentsRes, coursesRes] = await Promise.all([
+        assignmentAPI.getAll(),
+        courseAPI.getAll({ teacher_id: user?.id })
+      ]);
 
-    setTimeout(() => {
-      setAssignments(sampleAssignments);
+      if (assignmentsRes.success) {
+        setAssignments(assignmentsRes.data.map(a => ({
+          ...a,
+          dueDate: new Date(a.due_date).toLocaleDateString('fr-FR'),
+          class: a.class_name || a.course_code || 'N/A', // Display class name if available, else course code
+          submitted: 0, // TODO: Fetch submissions count
+          total: 0 // TODO: Fetch total students
+        })));
+      }
+
+      if (coursesRes.success) {
+        setCourses(coursesRes.data);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
       setLoading(false);
-    }, 500);
-  }, []);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
 
   const filteredAssignments = assignments.filter(a =>
     filter === 'all' || a.status === filter
@@ -72,17 +95,38 @@ const TeacherAssignmentsPage = () => {
     );
   };
 
-  const handleCreate = () => {
-    setShowModal(false);
-    setNewAssignment({
-      title: '',
-      class: '',
-      description: '',
-      dueDate: '',
-      dueTime: '23:59',
-      points: 20,
-      attachments: [],
-    });
+  const handleCreate = async () => {
+    try {
+      if (!newAssignment.course_id) {
+        alert('Veuillez sélectionner un cours');
+        return;
+      }
+
+      await assignmentAPI.create({
+        course_id: newAssignment.course_id,
+        title: newAssignment.title,
+        description: newAssignment.description,
+        points: newAssignment.points,
+        due_date: `${newAssignment.due_date}T${newAssignment.due_time}:00`,
+        is_published: true // Default to published for now
+      });
+
+      alert('Devoir créé avec succès !');
+      setShowModal(false);
+      setNewAssignment({
+        title: '',
+        course_id: '',
+        description: '',
+        due_date: '',
+        due_time: '23:59',
+        points: 20,
+        is_published: false
+      });
+      fetchData(); // Refresh list
+    } catch (error) {
+      console.error('Error creating assignment:', error);
+      alert('Erreur lors de la création du devoir');
+    }
   };
 
   if (loading) {
@@ -98,7 +142,7 @@ const TeacherAssignmentsPage = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Devoirs</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Devoirs (Live)</h1>
           <p className="text-gray-500">{assignments.length} devoirs créés</p>
         </div>
         <button
@@ -172,11 +216,10 @@ const TeacherAssignmentsPage = () => {
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === f
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === f
+              ? 'bg-indigo-600 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
           >
             {f === 'all' ? 'Tous' : f === 'active' ? 'Actifs' : f === 'grading' ? 'Correction' : f === 'draft' ? 'Brouillons' : 'Terminés'}
           </button>
@@ -274,17 +317,18 @@ const TeacherAssignmentsPage = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Classe</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cours</label>
                   <select
-                    value={newAssignment.class}
-                    onChange={(e) => setNewAssignment({ ...newAssignment, class: e.target.value })}
+                    value={newAssignment.course_id}
+                    onChange={(e) => setNewAssignment({ ...newAssignment, course_id: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                   >
-                    <option value="">Sélectionner...</option>
-                    <option value="6A">6ème A</option>
-                    <option value="5B">5ème B</option>
-                    <option value="4A">4ème A</option>
-                    <option value="3C">3ème C</option>
+                    <option value="">Sélectionner un cours...</option>
+                    {courses.map(course => (
+                      <option key={course.id} value={course.id}>
+                        {course.title} ({course.class_name || course.code})
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -302,8 +346,8 @@ const TeacherAssignmentsPage = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Date limite</label>
                   <input
                     type="date"
-                    value={newAssignment.dueDate}
-                    onChange={(e) => setNewAssignment({ ...newAssignment, dueDate: e.target.value })}
+                    value={newAssignment.due_date}
+                    onChange={(e) => setNewAssignment({ ...newAssignment, due_date: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -311,8 +355,8 @@ const TeacherAssignmentsPage = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Heure limite</label>
                   <input
                     type="time"
-                    value={newAssignment.dueTime}
-                    onChange={(e) => setNewAssignment({ ...newAssignment, dueTime: e.target.value })}
+                    value={newAssignment.due_time}
+                    onChange={(e) => setNewAssignment({ ...newAssignment, due_time: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
