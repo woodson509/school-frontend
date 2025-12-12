@@ -4,17 +4,35 @@
  */
 
 import { useState, useEffect } from 'react';
+import { subjectAPI } from '../../services/api';
 
 const CourseFormModal = ({ course, teachers, classes, onClose, onSave }) => {
+    const [subjects, setSubjects] = useState([]);
     const [formData, setFormData] = useState({
         title: '',
         code: '',
         teacher_id: '',
         class_id: '',
+        subject_id: '',
         credits: 3,
         status: 'draft',
         description: '',
     });
+
+    useEffect(() => {
+        fetchSubjects();
+    }, []);
+
+    const fetchSubjects = async () => {
+        try {
+            const response = await subjectAPI.getAll();
+            if (response.success) {
+                setSubjects(response.data);
+            }
+        } catch (error) {
+            console.error('Error fetching subjects:', error);
+        }
+    };
 
     useEffect(() => {
         if (course) {
@@ -23,6 +41,7 @@ const CourseFormModal = ({ course, teachers, classes, onClose, onSave }) => {
                 code: course.code || '',
                 teacher_id: course.teacher_id || '',
                 class_id: course.class_id || '',
+                subject_id: course.subject_id || '',
                 credits: course.credits || 3,
                 status: course.status || 'draft',
                 description: course.description || '',
@@ -89,6 +108,22 @@ const CourseFormModal = ({ course, teachers, classes, onClose, onSave }) => {
                             {classes?.map((cls) => (
                                 <option key={cls.id} value={cls.id}>
                                     {cls.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Matière / Sujet</label>
+                        <select
+                            value={formData.subject_id}
+                            onChange={(e) => setFormData({ ...formData, subject_id: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">Sélectionner une matière</option>
+                            {subjects.map((subject) => (
+                                <option key={subject.id} value={subject.id}>
+                                    {subject.name} ({subject.code})
                                 </option>
                             ))}
                         </select>

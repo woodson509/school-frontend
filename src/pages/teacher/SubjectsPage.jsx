@@ -6,36 +6,50 @@
 import { useState, useEffect } from 'react';
 import {
     BookMarked,
-    Search,
-    BookOpen,
-    Users,
-    Clock
+    Search
 } from 'lucide-react';
-import { subjectAPI } from '../../services/api';
+import { subjectAPI, courseAPI } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 const TeacherSubjectsPage = () => {
+    const { user } = useAuth();
     const [subjects, setSubjects] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
-        fetchSubjects();
+        fetchData();
     }, []);
 
-    const fetchSubjects = async () => {
+    const fetchData = async () => {
         try {
             setLoading(true);
-            const response = await subjectAPI.getAll();
-            if (response.success) {
-                // Map API data to frontend format
-                const mappedSubjects = response.data.map(subject => ({
-                    ...subject,
-                    color: subject.color || '#3B82F6' // Default color if not in DB
-                }));
+            const [subjectsRes, coursesRes] = await Promise.all([
+                subjectAPI.getAll(),
+                courseAPI.getAll({ teacher_id: user.id })
+            ]);
+
+            if (subjectsRes.success) {
+                const courses = coursesRes.success ? coursesRes.data : [];
+
+                // Map API data to frontend format and count courses
+                const mappedSubjects = subjectsRes.data.map(subject => {
+                    const subjectCourses = courses.filter(c => c.subject_id === subject.id);
+                    return {
+                        ...subject,
+                        coursesCount: subjectCourses.length,
+                        color: subject.color || '#3B82F6'
+                    };
+                });
+
+                // Optional: Filter to show only subjects where teacher has courses, OR all subjects
+                // For now, let's sort by count descending so relevant ones are first
+                mappedSubjects.sort((a, b) => b.coursesCount - a.coursesCount);
+
                 setSubjects(mappedSubjects);
             }
         } catch (error) {
-            console.error('Error fetching subjects:', error);
+            console.error('Error fetching data:', error);
         } finally {
             setLoading(false);
         }
@@ -60,7 +74,7 @@ const TeacherSubjectsPage = () => {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800">Matières</h1>
-                    <p className="text-gray-500">Consultez la liste des matières enseignées</p>
+                    <p className="text-gray-500">Consultez la liste des matières et vos cours associés</p>
                 </div>
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -79,7 +93,7 @@ const TeacherSubjectsPage = () => {
                 {filteredSubjects.map((subject) => (
                     <div
                         key={subject.id}
-                        className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+                        className={`bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow ${subject.coursesCount > 0 ? 'ring-2 ring-indigo-100' : 'opacity-75 grayscale-0'}`}
                     >
                         <div
                             className="h-2"
@@ -93,14 +107,22 @@ const TeacherSubjectsPage = () => {
                                 >
                                     <BookMarked className="w-6 h-6" style={{ color: subject.color }} />
                                 </div>
+                                {subject.coursesCount > 0 && (
+                                    <span className="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                                        Actif
+                                    </span>
+                                )}
                             </div>
 
                             <h3 className="font-semibold text-gray-800 mb-1">{subject.name}</h3>
                             <p className="text-sm text-gray-500 mb-4">{subject.code}</p>
-                            <p className="text-sm text-gray-600 mb-4 line-clamp-2">{subject.description}</p>
 
-                            <div className="flex items-center justify-between text-sm">
-                                {/* <span className="text-gray-500">{subject.courses || 0} cours</span> */}
+                            <div className="pt-4 border-t border-gray-100">
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className={subject.coursesCount > 0 ? "text-indigo-600 font-medium" : "text-gray-400"}>
+                                        {subject.coursesCount} cours associé{subject.coursesCount > 1 ? 's' : ''}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>
