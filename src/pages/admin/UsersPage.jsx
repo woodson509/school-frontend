@@ -83,11 +83,19 @@ const UsersPage = () => {
     });
 
     const handleSave = async (data) => {
+        // Clean empty strings to null to avoid DB errors with dates and UUIDs
+        const cleanedData = Object.fromEntries(
+            Object.entries(data).map(([key, value]) => [
+                key,
+                value === '' ? null : value
+            ])
+        );
+
         try {
             if (editingUser) {
-                await userAPI.update(editingUser.id, data);
+                await userAPI.update(editingUser.id, cleanedData);
             } else {
-                await userAPI.create(data);
+                await userAPI.create(cleanedData);
             }
             fetchData();
             setShowModal(false);
@@ -99,7 +107,9 @@ const UsersPage = () => {
             if (error.message?.includes('User already exists') || error.response?.data?.message?.includes('User already exists')) {
                 errorMessage = 'Cet email est déjà utilisé par un autre utilisateur.';
             } else if (error.response?.status === 500) {
-                errorMessage = 'Erreur serveur interne. Veuillez contacter le support technique. (Détails: ' + (error.response?.data?.message || error.message) + ')';
+                // Show detailed error from backend if available (e.g. invalid input syntax)
+                const detail = error.response?.data?.error || error.response?.data?.message || error.message;
+                errorMessage = 'Erreur serveur interne. Veuillez contacter le support technique. (Détails: ' + detail + ')';
             } else if (error.message) {
                 errorMessage = `Erreur: ${error.message}`;
             }
