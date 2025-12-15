@@ -22,7 +22,7 @@ import {
   X
 } from 'lucide-react';
 import { examAPI, courseAPI } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 const TeacherExamsPage = () => {
   const { user } = useAuth();
@@ -183,8 +183,8 @@ const TeacherExamsPage = () => {
             key={f}
             onClick={() => setFilter(f)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === f
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-indigo-600 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
           >
             {f === 'all' ? 'Tous' : f === 'scheduled' ? 'Programmés' : 'Terminés'}
