@@ -834,49 +834,6 @@ export const curriculumAPI = {
 };
 
 
-/**
- * Exam APIs
- */
-export const examAPI = {
-  getAll: async (params = {}) => {
-    const queryString = new URLSearchParams(params).toString();
-    return fetchWithAuth(`/exams${queryString ? `?${queryString}` : ''}`);
-  },
-  getById: async (id) => {
-    return fetchWithAuth(`/exams/${id}`);
-  },
-  create: async (data) => {
-    return fetchWithAuth('/exams', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-  update: async (id, data) => {
-    return fetchWithAuth(`/exams/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  },
-  delete: async (id) => {
-    return fetchWithAuth(`/exams/${id}`, {
-      method: 'DELETE',
-    });
-  },
-  start: async (id) => {
-    return fetchWithAuth(`/exams/${id}/start`, {
-      method: 'POST',
-    });
-  },
-  submit: async (id, answers) => {
-    return fetchWithAuth(`/exams/${id}/submit`, {
-      method: 'POST',
-      body: JSON.stringify({ answers }),
-    });
-  },
-  getAttempts: async (id) => {
-    return fetchWithAuth(`/exams/${id}/attempts`);
-  },
-};
 
 /**
  * Schedule APIs
