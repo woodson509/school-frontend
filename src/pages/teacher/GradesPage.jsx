@@ -92,6 +92,12 @@ const TeacherGradesPage = () => {
         const studentList = studentsRes.data || [];
         const existingGrades = gradesRes.data || [];
 
+        // Debug notification
+        setNotification({
+          type: 'info',
+          message: `Debug: Trouvé ${existingGrades.length} notes pour ${studentList.length} élèves. (ExamID: ${selectedExamId})`
+        });
+
         // 3. Merge Data
         const mergedData = studentList.map(student => {
           const gradeRecord = existingGrades.find(g => g.student_id === student.id);
