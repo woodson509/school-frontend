@@ -221,7 +221,7 @@ const TeacherExamsPage = () => {
                 <div className="space-y-2 text-sm text-gray-600">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-gray-400" />
-                    {new Date(exam.exam_date).toLocaleDateString()} {new Date(exam.exam_date).toLocaleTimeString([], { hour: '2bit', minute: '2-digit' })}
+                    {new Date(exam.exam_date).toLocaleDateString()} {new Date(exam.exam_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-gray-400" />
