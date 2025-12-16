@@ -1003,6 +1003,13 @@ export const gradesAPI = {
     });
   },
 
+  saveBulk: async (data) => {
+    return fetchWithAuth('/grades/bulk', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   updateGrade: async (id, data) => {
     return fetchWithAuth(`/grades/${id}`, {
       method: 'PUT',
