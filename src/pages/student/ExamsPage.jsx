@@ -141,8 +141,8 @@ const StudentExamsPage = () => {
             <button
               onClick={() => setActiveTab('upcoming')}
               className={`flex-1 py-4 text-center font-medium transition-colors ${activeTab === 'upcoming'
-                  ? 'text-emerald-600 border-b-2 border-emerald-600'
-                  : 'text-gray-500 hover:text-gray-700'
+                ? 'text-emerald-600 border-b-2 border-emerald-600'
+                : 'text-gray-500 hover:text-gray-700'
                 }`}
             >
               À venir ({upcomingExams.length})
@@ -150,8 +150,8 @@ const StudentExamsPage = () => {
             <button
               onClick={() => setActiveTab('completed')}
               className={`flex-1 py-4 text-center font-medium transition-colors ${activeTab === 'completed'
-                  ? 'text-emerald-600 border-b-2 border-emerald-600'
-                  : 'text-gray-500 hover:text-gray-700'
+                ? 'text-emerald-600 border-b-2 border-emerald-600'
+                : 'text-gray-500 hover:text-gray-700'
                 }`}
             >
               Passés ({completedExams.length})
@@ -190,7 +190,7 @@ const StudentExamsPage = () => {
                           <div>
                             <div className="flex items-center gap-2 mb-1">
                               <h3 className="font-semibold text-gray-800">{exam.title}</h3>
-                              {getTypeBadge('written')}
+                              {getTypeBadge(exam.type)}
                             </div>
                             <p className="text-sm text-gray-500 mb-2">{exam.subject_name || exam.course_title}</p>
                             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
@@ -209,14 +209,21 @@ const StudentExamsPage = () => {
                             </span>
                           )}
 
-                          {/* Always allow taking exam if it's today or published */}
-                          <Link
-                            to={`/exams/${exam.id}`}
-                            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-                          >
-                            <Play className="w-4 h-4" />
-                            Commencer
-                          </Link>
+                          {/* Only allow taking exam online if it's type is online */}
+                          {exam.type === 'online' ? (
+                            <Link
+                              to={`/exams/${exam.id}`}
+                              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                            >
+                              <Play className="w-4 h-4" />
+                              Commencer
+                            </Link>
+                          ) : (
+                            <div className="flex flex-col items-end text-sm text-gray-500">
+                              <span className="font-medium">Examen sur table</span>
+                              <span>{new Date(exam.exam_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -249,7 +256,7 @@ const StudentExamsPage = () => {
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <h3 className="font-semibold text-gray-800">{exam.title}</h3>
-                            {getTypeBadge('written')}
+                            {getTypeBadge(exam.type)}
                           </div>
                           <p className="text-sm text-gray-500 mb-2">{exam.subject_name || exam.course_title}</p>
                         </div>
