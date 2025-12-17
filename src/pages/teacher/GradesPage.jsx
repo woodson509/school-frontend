@@ -82,12 +82,22 @@ const TeacherGradesPage = () => {
           limit: 100 // Fetch all students
         });
 
-        // 2. Fetch Existing Grades for this Exam
-        const gradesRes = await gradesAPI.getGrades({
-          exam_id: selectedExamId,
-          class_id: selectedClassId
-          // We could also filter by report_period_id if needed, but exam_id is unique enough
-        });
+        // 2. Fetch Existing Grades for this Exam - USING DEBUG BYPASS
+        const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+        const debugUrl = `${API_BASE}/debug/test-grades?exam_id=${selectedExamId}`;
+        const debugResponse = await fetch(debugUrl);
+        const debugData = await debugResponse.json();
+
+        // Map debug response to expected format
+        const gradesRes = {
+          success: true,
+          data: debugData.data || [],
+          _debug: {
+            path: 'DEBUG_BYPASS',
+            rows_found: debugData.rows_found,
+            received_exam_id: debugData.received_exam_id
+          }
+        };
 
         const studentList = studentsRes.data || [];
         const existingGrades = gradesRes.data || [];
