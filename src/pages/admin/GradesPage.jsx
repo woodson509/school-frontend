@@ -78,18 +78,22 @@ const GradesPage = () => {
       // USING DEBUG BYPASS - Same as teacher page
       const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
-      // For admin, we need to fetch ALL grades for the selected class (no exam_id filter)
-      // The debug endpoint filters by exam_id, so we need a different approach
-      // Use the dump endpoint to get all grades and filter client-side
+      // Use the dump endpoint to get all grades
       const dumpResponse = await fetch(`${API_BASE}/debug/dump-grades`);
       const dumpData = await dumpResponse.json();
 
-      // Filter by class_id, subject_id, report_period_id on client side
-      const filteredGrades = dumpData.filter(g =>
-        g.class_id === selectedClass &&
-        g.subject_id === selectedSubject &&
-        g.report_period_id === selectedPeriod
-      );
+      console.log('Admin Debug - All grades from dump:', dumpData);
+      console.log('Admin Debug - Selected filters:', { selectedClass, selectedSubject, selectedPeriod });
+
+      // Filter by class_id ONLY (subject and period may not match stored data)
+      const filteredGrades = dumpData.filter(g => g.class_id === selectedClass);
+
+      console.log('Admin Debug - Filtered grades:', filteredGrades);
+
+      // Show debug alert to user
+      if (dumpData.length > 0 && filteredGrades.length === 0) {
+        alert(`DEBUG: ${dumpData.length} notes en base. Classe sélectionnée: ${selectedClass}. Classe en base: ${dumpData[0]?.class_id}. Elles ne correspondent pas!`);
+      }
 
       const studentsRes = await userAPI.getAll({ role: 'student', class_id: selectedClass });
 
