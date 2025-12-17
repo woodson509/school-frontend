@@ -17,30 +17,36 @@ import {
   ChevronRight,
   BarChart,
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { courseAPI } from '../../services/api';
 
 const StudentCoursesPage = () => {
+  const { user } = useAuth();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
-    const sampleCourses = [
-      { id: 1, title: 'Mathématiques Avancées', code: 'MATH-301', teacher: 'M. Dupont', progress: 75, lessons: 24, completedLessons: 18, nextLesson: 'Intégrales définies', color: '#3B82F6', status: 'in_progress' },
-      { id: 2, title: 'Physique Quantique', code: 'PHY-201', teacher: 'M. Bernard', progress: 60, lessons: 20, completedLessons: 12, nextLesson: 'Équation de Schrödinger', color: '#8B5CF6', status: 'in_progress' },
-      { id: 3, title: 'Littérature Française', code: 'FR-101', teacher: 'Mme Martin', progress: 100, lessons: 18, completedLessons: 18, nextLesson: null, color: '#EF4444', status: 'completed' },
-      { id: 4, title: 'Anglais Business', code: 'EN-301', teacher: 'Mme Petit', progress: 45, lessons: 22, completedLessons: 10, nextLesson: 'Business Correspondence', color: '#F59E0B', status: 'in_progress' },
-      { id: 5, title: 'Histoire du 20ème siècle', code: 'HIST-202', teacher: 'M. Robert', progress: 30, lessons: 16, completedLessons: 5, nextLesson: 'La Guerre Froide', color: '#EC4899', status: 'in_progress' },
-      { id: 6, title: 'Chimie Organique', code: 'CHEM-301', teacher: 'M. Simon', progress: 0, lessons: 26, completedLessons: 0, nextLesson: 'Introduction aux hydrocarbures', color: '#10B981', status: 'not_started' },
-      { id: 7, title: 'Informatique', code: 'CS-101', teacher: 'Mme Moreau', progress: 85, lessons: 30, completedLessons: 26, nextLesson: 'Algorithmes de tri', color: '#6366F1', status: 'in_progress' },
-      { id: 8, title: 'Biologie Cellulaire', code: 'BIO-201', teacher: 'M. Leroy', progress: 100, lessons: 20, completedLessons: 20, nextLesson: null, color: '#14B8A6', status: 'completed' },
-    ];
+    const fetchCourses = async () => {
+      try {
+        setLoading(true);
+        // role='student' is handled by backend automatically based on token, 
+        // but passing it explicitly doesn't hurt if we wanted to overload params.
+        // Backend overrides logic for student role anyway.
+        const response = await courseAPI.getAll();
+        setCourses(response.data || []);
+      } catch (error) {
+        console.error('Error fetching courses:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    setTimeout(() => {
-      setCourses(sampleCourses);
-      setLoading(false);
-    }, 500);
-  }, []);
+    if (user) {
+      fetchCourses();
+    }
+  }, [user]);
 
   const filteredCourses = courses.filter(course => {
     const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
