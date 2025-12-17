@@ -3,7 +3,7 @@
  * Weekly timetable view
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Clock,
   ChevronLeft,
@@ -12,64 +12,73 @@ import {
   User,
   Download,
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { scheduleAPI } from '../../services/api';
 
 const StudentSchedulePage = () => {
+  const { user } = useAuth();
   const [currentWeek, setCurrentWeek] = useState(0);
   const [viewMode, setViewMode] = useState('week');
+  const [schedule, setSchedule] = useState({});
+  const [loading, setLoading] = useState(true);
 
-  const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
+  const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']; // Added Samedi just in case
   const timeSlots = [
     '07:30 - 08:30',
     '08:30 - 09:30',
-    '09:30 - 10:00',
+    '09:30 - 10:00', // Break
     '10:00 - 11:00',
     '11:00 - 12:00',
-    '12:00 - 13:30',
+    '12:00 - 13:30', // Lunch
     '13:30 - 14:30',
     '14:30 - 15:30',
     '15:30 - 16:30',
+    '16:30 - 17:30',
   ];
 
-  const schedule = {
-    'Lundi': {
-      '07:30 - 08:30': { subject: 'Mathématiques', teacher: 'M. Dupont', room: 'A101', color: '#3B82F6' },
-      '08:30 - 09:30': { subject: 'Français', teacher: 'Mme Martin', room: 'A101', color: '#EF4444' },
-      '10:00 - 11:00': { subject: 'Physique', teacher: 'M. Bernard', room: 'Labo 1', color: '#8B5CF6' },
-      '11:00 - 12:00': { subject: 'Anglais', teacher: 'Mme Petit', room: 'A101', color: '#F59E0B' },
-      '13:30 - 14:30': { subject: 'Histoire', teacher: 'M. Robert', room: 'A102', color: '#EC4899' },
-      '14:30 - 15:30': { subject: 'Sport', teacher: 'M. Laurent', room: 'Gymnase', color: '#10B981' },
-    },
-    'Mardi': {
-      '07:30 - 08:30': { subject: 'Français', teacher: 'Mme Martin', room: 'A101', color: '#EF4444' },
-      '08:30 - 09:30': { subject: 'Mathématiques', teacher: 'M. Dupont', room: 'A101', color: '#3B82F6' },
-      '10:00 - 11:00': { subject: 'Chimie', teacher: 'M. Simon', room: 'Labo 2', color: '#14B8A6' },
-      '11:00 - 12:00': { subject: 'Informatique', teacher: 'Mme Moreau', room: 'Info 1', color: '#6366F1' },
-      '13:30 - 14:30': { subject: 'Biologie', teacher: 'M. Leroy', room: 'Labo 3', color: '#22C55E' },
-      '14:30 - 15:30': { subject: 'Arts', teacher: 'Mme Dubois', room: 'Art 1', color: '#A855F7' },
-    },
-    'Mercredi': {
-      '07:30 - 08:30': { subject: 'Mathématiques', teacher: 'M. Dupont', room: 'A101', color: '#3B82F6' },
-      '08:30 - 09:30': { subject: 'Physique', teacher: 'M. Bernard', room: 'Labo 1', color: '#8B5CF6' },
-      '10:00 - 11:00': { subject: 'Anglais', teacher: 'Mme Petit', room: 'A101', color: '#F59E0B' },
-      '11:00 - 12:00': { subject: 'Géographie', teacher: 'M. Blanc', room: 'A102', color: '#0EA5E9' },
-    },
-    'Jeudi': {
-      '07:30 - 08:30': { subject: 'Français', teacher: 'Mme Martin', room: 'A101', color: '#EF4444' },
-      '08:30 - 09:30': { subject: 'Histoire', teacher: 'M. Robert', room: 'A102', color: '#EC4899' },
-      '10:00 - 11:00': { subject: 'Mathématiques', teacher: 'M. Dupont', room: 'A101', color: '#3B82F6' },
-      '11:00 - 12:00': { subject: 'Physique', teacher: 'M. Bernard', room: 'Labo 1', color: '#8B5CF6' },
-      '13:30 - 14:30': { subject: 'Musique', teacher: 'Mme Garcia', room: 'Musique', color: '#F97316' },
-      '14:30 - 15:30': { subject: 'Informatique', teacher: 'Mme Moreau', room: 'Info 1', color: '#6366F1' },
-    },
-    'Vendredi': {
-      '07:30 - 08:30': { subject: 'Anglais', teacher: 'Mme Petit', room: 'A101', color: '#F59E0B' },
-      '08:30 - 09:30': { subject: 'Français', teacher: 'Mme Martin', room: 'A101', color: '#EF4444' },
-      '10:00 - 11:00': { subject: 'Chimie', teacher: 'M. Simon', room: 'Labo 2', color: '#14B8A6' },
-      '11:00 - 12:00': { subject: 'Mathématiques', teacher: 'M. Dupont', room: 'A101', color: '#3B82F6' },
-      '13:30 - 14:30': { subject: 'Sport', teacher: 'M. Laurent', room: 'Gymnase', color: '#10B981' },
-      '14:30 - 15:30': { subject: 'Étude dirigée', teacher: 'M. Dupont', room: 'A101', color: '#64748B' },
-    },
-  };
+  useEffect(() => {
+    const fetchSchedule = async () => {
+      try {
+        setLoading(true);
+        if (!user) return;
+
+        const response = await scheduleAPI.getAll({ role: 'student' }); // auto-detected by backend anyway
+        const data = response.data || [];
+
+        // Transform flat array to nested object: schedule[Day][TimeSlot]
+        const newSchedule = {};
+
+        data.forEach(item => {
+          const day = item.day_of_week;
+          if (!days.includes(day)) return; // skip invalid days
+
+          // Format times to match slot keys (e.g. 07:30 - 08:30)
+          // Assuming DB returns HH:MM:SS or HH:MM
+          const start = item.start_time.substring(0, 5);
+          const end = item.end_time.substring(0, 5);
+          const slotKey = `${start} - ${end}`; // strict match for now
+
+          if (!newSchedule[day]) newSchedule[day] = {};
+
+          newSchedule[day][slotKey] = {
+            subject: item.subject_name || 'Cours',
+            teacher: item.teacher_name || 'N/A',
+            room: item.room || 'N/A',
+            color: item.color || '#3B82F6',
+            notes: item.notes
+          };
+        });
+
+        setSchedule(newSchedule);
+      } catch (error) {
+        console.error('Error fetching schedule:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSchedule();
+  }, [user]);
 
   const isBreak = (slot) => slot === '09:30 - 10:00' || slot === '12:00 - 13:30';
   const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long' });
@@ -79,7 +88,7 @@ const StudentSchedulePage = () => {
     const today = new Date();
     const monday = new Date(today);
     monday.setDate(today.getDate() - today.getDay() + 1 + currentWeek * 7);
-    
+
     return days.map((day, index) => {
       const date = new Date(monday);
       date.setDate(monday.getDate() + index);
@@ -106,17 +115,15 @@ const StudentSchedulePage = () => {
           <div className="flex items-center gap-1 bg-white rounded-lg shadow-sm p-1">
             <button
               onClick={() => setViewMode('week')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                viewMode === 'week' ? 'bg-emerald-600 text-white' : 'text-gray-600'
-              }`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === 'week' ? 'bg-emerald-600 text-white' : 'text-gray-600'
+                }`}
             >
               Semaine
             </button>
             <button
               onClick={() => setViewMode('day')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                viewMode === 'day' ? 'bg-emerald-600 text-white' : 'text-gray-600'
-              }`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === 'day' ? 'bg-emerald-600 text-white' : 'text-gray-600'
+                }`}
             >
               Jour
             </button>
@@ -162,9 +169,8 @@ const StudentSchedulePage = () => {
           {weekDates.map((item, index) => (
             <div
               key={index}
-              className={`text-center py-2 rounded-lg ${
-                item.isToday ? 'bg-emerald-100' : ''
-              }`}
+              className={`text-center py-2 rounded-lg ${item.isToday ? 'bg-emerald-100' : ''
+                }`}
             >
               <p className={`text-sm font-medium ${item.isToday ? 'text-emerald-700' : 'text-gray-600'}`}>
                 {item.day}
@@ -191,6 +197,14 @@ const StudentSchedulePage = () => {
                     </div>
                   </td>
                   {days.map(day => {
+                    // Find course for this specific slot if key logic doesn't match perfectly
+                    // or just rely on formatted keys.
+                    // For now, let's keep strict match but ensure we populated it correctly.
+                    // In real world, we'd iterate over raw events and check start/end time overlap.
+                    // But our backend keys are constructed to match.
+
+                    // Fallback: check raw data? No, transformation did the job.
+
                     const courseData = schedule[day]?.[slot];
                     const isCurrentDay = day === capitalizedToday && currentWeek === 0;
                     return (

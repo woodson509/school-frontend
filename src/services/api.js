@@ -1172,3 +1172,32 @@ export default {
   analyticsAPI,
   eventAPI,
 };
+/**
+ * Schedule APIs
+ */
+export const scheduleAPI = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/schedules${queryString ? `?${queryString}` : ''}`);
+  },
+
+  create: async (data) => {
+    return fetchWithAuth('/schedules', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (id, data) => {
+    return fetchWithAuth(`/schedules/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async (id) => {
+    return fetchWithAuth(`/schedules/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
