@@ -102,6 +102,27 @@ export const courseAPI = {
 };
 
 /**
+ * Dashboard APIs
+ */
+export const dashboardAPI = {
+  getSuperAdmin: async () => {
+    return fetchWithAuth('/dashboard/superadmin');
+  },
+
+  getAdmin: async () => {
+    return fetchWithAuth('/dashboard/admin');
+  },
+
+  getTeacher: async () => {
+    return fetchWithAuth('/dashboard/teacher');
+  },
+
+  getStudent: async () => {
+    return fetchWithAuth('/dashboard/student');
+  },
+};
+
+/**
  * Exam APIs
  */
 export const examAPI = {
@@ -462,27 +483,6 @@ export const backupAPI = {
     return fetchWithAuth(`/backups/${filename}`, {
       method: 'DELETE'
     });
-  }
-};
-
-/**
- * Dashboard APIs
- */
-export const dashboardAPI = {
-  getSuperAdmin: async () => {
-    return fetchWithAuth('/dashboard/superadmin');
-  },
-
-  getAdmin: async () => {
-    return fetchWithAuth('/dashboard/admin');
-  },
-
-  getTeacher: async () => {
-    return fetchWithAuth('/dashboard/teacher');
-  },
-
-  getStudent: async () => {
-    return fetchWithAuth('/dashboard/student');
   }
 };
 
