@@ -82,18 +82,8 @@ const GradesPage = () => {
       const dumpResponse = await fetch(`${API_BASE}/debug/dump-grades`);
       const dumpData = await dumpResponse.json();
 
-      console.log('Admin Debug - All grades from dump:', dumpData);
-      console.log('Admin Debug - Selected filters:', { selectedClass, selectedSubject, selectedPeriod });
-
-      // Filter by class_id ONLY (subject and period may not match stored data)
+      // Filter by class_id
       const filteredGrades = dumpData.filter(g => g.class_id === selectedClass);
-
-      console.log('Admin Debug - Filtered grades:', filteredGrades);
-
-      // Show debug alert to user
-      if (dumpData.length > 0 && filteredGrades.length === 0) {
-        alert(`DEBUG: ${dumpData.length} notes en base. Classe sélectionnée: ${selectedClass}. Classe en base: ${dumpData[0]?.class_id}. Elles ne correspondent pas!`);
-      }
 
       const studentsRes = await userAPI.getAll({ role: 'student', class_id: selectedClass });
 
