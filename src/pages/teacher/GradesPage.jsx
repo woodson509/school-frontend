@@ -93,9 +93,10 @@ const TeacherGradesPage = () => {
         const existingGrades = gradesRes.data || [];
 
         // Debug notification
+        // Debug notification
         setNotification({
           type: 'info',
-          message: `Debug: Trouvé ${existingGrades.length} notes pour ${studentList.length} élèves. (ExamID: ${selectedExamId})`
+          message: `STATUS: OK. Trouvé ${existingGrades.length} notes. (ExamID: ${selectedExamId}). Raw: ${JSON.stringify(existingGrades).substring(0, 50)}...`
         });
 
         // 3. Merge Data
@@ -127,7 +128,7 @@ const TeacherGradesPage = () => {
 
       } catch (error) {
         console.error("Error fetching students/grades", error);
-        setNotification({ type: 'error', message: 'Erreur lors du chargement des données.' });
+        setNotification({ type: 'error', message: `ERREUR CRITIQUE: ${error.message}` });
       } finally {
         setLoading(false);
       }
