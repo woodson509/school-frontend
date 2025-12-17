@@ -17,7 +17,8 @@ import {
   AlertTriangle,
   CheckCircle,
   X,
-  BarChart2
+  BarChart2,
+  Edit2
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -467,10 +468,49 @@ const ReportsPage = () => {
   );
 };
 
-// Individual Bulletin Detail Component
+// Individual Bulletin Detail Component with Grade Editing
 const BulletinDetail = ({ bulletin, className, periodName, classStats, onClose, getGradeColor, getAppreciation }) => {
   const { student, subjectDetails, overallAverage, rank, totalGrades } = bulletin;
   const isPassing = overallAverage && parseFloat(overallAverage) >= 10;
+  const [editMode, setEditMode] = useState(false);
+  const [editingGrades, setEditingGrades] = useState({});
+  const [saving, setSaving] = useState(false);
+
+  const handleGradeChange = (subjectId, value) => {
+    setEditingGrades(prev => ({ ...prev, [subjectId]: value }));
+  };
+
+  const handleSaveGrades = async () => {
+    try {
+      setSaving(true);
+      const { gradesAPI } = api;
+
+      // For each modified grade, update it
+      for (const [subjectId, newValue] of Object.entries(editingGrades)) {
+        const detail = subjectDetails.find(d => d.subject.id === subjectId);
+        if (detail && detail.gradeId) {
+          await gradesAPI.updateGrade(detail.gradeId, { value: parseFloat(newValue) });
+        }
+      }
+
+      alert('Notes mises à jour avec succès !');
+      setEditMode(false);
+      setEditingGrades({});
+      onClose(); // Close to refresh data
+    } catch (error) {
+      console.error('Error updating grades:', error);
+      alert('Erreur lors de la mise à jour des notes');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getDisplayValue = (detail) => {
+    if (editingGrades[detail.subject.id] !== undefined) {
+      return editingGrades[detail.subject.id];
+    }
+    return detail.average;
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto p-4">
@@ -482,13 +522,43 @@ const BulletinDetail = ({ bulletin, className, periodName, classStats, onClose, 
             <p className="text-blue-100 mt-1">{className} • {periodName}</p>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={() => window.print()}
-              className="flex items-center gap-2 px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30"
-            >
-              <Printer className="w-4 h-4" />
-              Imprimer
-            </button>
+            {editMode ? (
+              <>
+                <button
+                  onClick={() => { setEditMode(false); setEditingGrades({}); }}
+                  className="flex items-center gap-2 px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30"
+                >
+                  <X className="w-4 h-4" />
+                  Annuler
+                </button>
+                <button
+                  onClick={handleSaveGrades}
+                  disabled={saving || Object.keys(editingGrades).length === 0}
+                  className="flex items-center gap-2 px-4 py-2 bg-white text-blue-700 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  {saving ? 'Sauvegarde...' : 'Enregistrer'}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setEditMode(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30"
+                  title="Modifier les notes"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Modifier
+                </button>
+                <button
+                  onClick={() => window.print()}
+                  className="flex items-center gap-2 px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30"
+                >
+                  <Printer className="w-4 h-4" />
+                  Imprimer
+                </button>
+              </>
+            )}
             <button
               onClick={onClose}
               className="p-2 hover:bg-white/20 rounded-lg"
@@ -499,6 +569,17 @@ const BulletinDetail = ({ bulletin, className, periodName, classStats, onClose, 
         </div>
 
         <div className="p-6 space-y-6">
+          {/* Edit Mode Banner */}
+          {editMode && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-yellow-600" />
+              <div>
+                <p className="font-medium text-yellow-800">Mode édition activé</p>
+                <p className="text-sm text-yellow-600">Modifiez les notes ci-dessous puis cliquez sur Enregistrer</p>
+              </div>
+            </div>
+          )}
+
           {/* Student Info */}
           <div className="flex items-center gap-6 p-4 bg-gray-50 rounded-xl">
             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-3xl font-bold">
@@ -536,20 +617,22 @@ const BulletinDetail = ({ bulletin, className, periodName, classStats, onClose, 
             </div>
           </div>
 
-          {/* Subjects Table */}
+          {/* Subjects Table with Edit Capability */}
           <div className="overflow-hidden rounded-xl border border-gray-200">
             <table className="w-full">
               <thead className="bg-gray-100">
                 <tr>
                   <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Matière</th>
                   <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Notes</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Moyenne</th>
+                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">
+                    Moyenne {editMode && <span className="text-blue-600">(modifiable)</span>}
+                  </th>
                   <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Appréciation</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {subjectDetails.filter(d => d.average !== null).map((detail, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
+                  <tr key={index} className={`hover:bg-gray-50 ${editMode ? 'bg-yellow-50/30' : ''}`}>
                     <td className="px-4 py-3 font-medium text-gray-800">
                       {detail.subject.name}
                     </td>
@@ -557,12 +640,24 @@ const BulletinDetail = ({ bulletin, className, periodName, classStats, onClose, 
                       {detail.gradeCount} note{detail.gradeCount > 1 ? 's' : ''}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`inline-block px-3 py-1 rounded-lg font-bold ${getGradeColor(detail.average)}`}>
-                        {detail.average}/20
-                      </span>
+                      {editMode ? (
+                        <input
+                          type="number"
+                          min="0"
+                          max="20"
+                          step="0.5"
+                          value={getDisplayValue(detail)}
+                          onChange={(e) => handleGradeChange(detail.subject.id, e.target.value)}
+                          className="w-20 px-2 py-1 text-center border-2 border-blue-400 rounded-lg font-bold focus:ring-2 focus:ring-blue-500"
+                        />
+                      ) : (
+                        <span className={`inline-block px-3 py-1 rounded-lg font-bold ${getGradeColor(detail.average)}`}>
+                          {detail.average}/20
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-600 italic">
-                      {getAppreciation(detail.average)}
+                      {getAppreciation(editingGrades[detail.subject.id] || detail.average)}
                     </td>
                   </tr>
                 ))}
@@ -579,7 +674,7 @@ const BulletinDetail = ({ bulletin, className, periodName, classStats, onClose, 
           </div>
 
           {/* Signatures */}
-          <div className="grid grid-cols-3 gap-8 pt-8">
+          <div className="grid grid-cols-3 gap-8 pt-8 print:pt-4">
             <div className="text-center">
               <p className="font-medium text-gray-700 mb-12">Signature des Parents</p>
               <div className="border-t-2 border-gray-400 mx-8"></div>
