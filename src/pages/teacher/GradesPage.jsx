@@ -102,13 +102,6 @@ const TeacherGradesPage = () => {
         const studentList = studentsRes.data || [];
         const existingGrades = gradesRes.data || [];
 
-        // Debug notification
-        const debugPath = gradesRes._debug?.path || 'UNKNOWN';
-        setNotification({
-          type: 'info',
-          message: `PATH: ${debugPath}. Notes: ${existingGrades.length}. Raw: ${JSON.stringify(existingGrades).substring(0, 80)}...`
-        });
-
         // 3. Merge Data
         const mergedData = studentList.map(student => {
           const gradeRecord = existingGrades.find(g => g.student_id === student.id);

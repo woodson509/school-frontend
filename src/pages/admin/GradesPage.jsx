@@ -75,16 +75,25 @@ const GradesPage = () => {
 
   const fetchGrades = async () => {
     try {
-      const [gradesRes, studentsRes] = await Promise.all([
-        gradesAPI.getGrades({
-          class_id: selectedClass,
-          subject_id: selectedSubject,
-          report_period_id: selectedPeriod
-        }),
-        userAPI.getAll({ role: 'student', class_id: selectedClass })
-      ]);
+      // USING DEBUG BYPASS - Same as teacher page
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
-      if (gradesRes.success) setGrades(gradesRes.data);
+      // For admin, we need to fetch ALL grades for the selected class (no exam_id filter)
+      // The debug endpoint filters by exam_id, so we need a different approach
+      // Use the dump endpoint to get all grades and filter client-side
+      const dumpResponse = await fetch(`${API_BASE}/debug/dump-grades`);
+      const dumpData = await dumpResponse.json();
+
+      // Filter by class_id, subject_id, report_period_id on client side
+      const filteredGrades = dumpData.filter(g =>
+        g.class_id === selectedClass &&
+        g.subject_id === selectedSubject &&
+        g.report_period_id === selectedPeriod
+      );
+
+      const studentsRes = await userAPI.getAll({ role: 'student', class_id: selectedClass });
+
+      setGrades(filteredGrades);
       if (studentsRes.success) setStudents(studentsRes.data);
     } catch (error) {
       console.error('Error fetching grades:', error);
