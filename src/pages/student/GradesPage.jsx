@@ -13,114 +13,102 @@ import {
   Download,
   ChevronDown,
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { gradeAPI } from '../../services/api';
 
 const StudentGradesPage = () => {
-  const [grades, setGrades] = useState([]);
+  const { user } = useAuth();
+  const [grades, setGrades] = useState({ subjects: [], globalAverage: 0, classGlobalAverage: 0, rank: 0, totalStudents: 0, trimester: 'Année courante' });
   const [loading, setLoading] = useState(true);
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [expandedSubject, setExpandedSubject] = useState(null);
 
   useEffect(() => {
-    const sampleGrades = {
-      subjects: [
-        {
-          name: 'Mathématiques',
-          code: 'MATH-301',
-          teacher: 'M. Dupont',
-          average: 15.5,
-          classAverage: 12.8,
-          coefficient: 4,
-          color: '#3B82F6',
-          grades: [
-            { id: 1, title: 'Contrôle intégrales', grade: 16, max: 20, date: '2024-12-10', type: 'Contrôle', coefficient: 2 },
-            { id: 2, title: 'DM Dérivées', grade: 14, max: 20, date: '2024-11-28', type: 'Devoir', coefficient: 1 },
-            { id: 3, title: 'Interrogation', grade: 17, max: 20, date: '2024-11-15', type: 'Interro', coefficient: 1 },
-            { id: 4, title: 'Contrôle limites', grade: 15, max: 20, date: '2024-10-20', type: 'Contrôle', coefficient: 2 },
-          ],
-        },
-        {
-          name: 'Physique',
-          code: 'PHY-201',
-          teacher: 'M. Bernard',
-          average: 14.2,
-          classAverage: 13.1,
-          coefficient: 3,
-          color: '#8B5CF6',
-          grades: [
-            { id: 5, title: 'TP Optique', grade: 15, max: 20, date: '2024-12-08', type: 'TP', coefficient: 1 },
-            { id: 6, title: 'Contrôle mécanique', grade: 13, max: 20, date: '2024-11-25', type: 'Contrôle', coefficient: 2 },
-            { id: 7, title: 'QCM', grade: 16, max: 20, date: '2024-11-10', type: 'QCM', coefficient: 1 },
-          ],
-        },
-        {
-          name: 'Français',
-          code: 'FR-101',
-          teacher: 'Mme Martin',
-          average: 13.8,
-          classAverage: 12.5,
-          coefficient: 4,
-          color: '#EF4444',
-          grades: [
-            { id: 8, title: 'Dissertation', grade: 14, max: 20, date: '2024-12-05', type: 'Devoir', coefficient: 2 },
-            { id: 9, title: 'Commentaire', grade: 13, max: 20, date: '2024-11-20', type: 'Devoir', coefficient: 2 },
-            { id: 10, title: 'Oral', grade: 15, max: 20, date: '2024-11-05', type: 'Oral', coefficient: 1 },
-          ],
-        },
-        {
-          name: 'Anglais',
-          code: 'EN-301',
-          teacher: 'Mme Petit',
-          average: 16.5,
-          classAverage: 13.2,
-          coefficient: 2,
-          color: '#F59E0B',
-          grades: [
-            { id: 11, title: 'Test vocabulaire', grade: 18, max: 20, date: '2024-12-12', type: 'Test', coefficient: 1 },
-            { id: 12, title: 'Expression écrite', grade: 15, max: 20, date: '2024-11-28', type: 'Devoir', coefficient: 2 },
-            { id: 13, title: 'Compréhension orale', grade: 17, max: 20, date: '2024-11-15', type: 'Test', coefficient: 1 },
-          ],
-        },
-        {
-          name: 'Histoire',
-          code: 'HIST-202',
-          teacher: 'M. Robert',
-          average: 14.0,
-          classAverage: 12.8,
-          coefficient: 2,
-          color: '#EC4899',
-          grades: [
-            { id: 14, title: 'Contrôle WWII', grade: 14, max: 20, date: '2024-12-01', type: 'Contrôle', coefficient: 2 },
-            { id: 15, title: 'Exposé', grade: 16, max: 20, date: '2024-11-18', type: 'Oral', coefficient: 1 },
-            { id: 16, title: 'QCM', grade: 12, max: 20, date: '2024-10-25', type: 'QCM', coefficient: 1 },
-          ],
-        },
-        {
-          name: 'Informatique',
-          code: 'CS-101',
-          teacher: 'Mme Moreau',
-          average: 17.5,
-          classAverage: 14.2,
-          coefficient: 2,
-          color: '#6366F1',
-          grades: [
-            { id: 17, title: 'Projet Python', grade: 18, max: 20, date: '2024-12-10', type: 'Projet', coefficient: 2 },
-            { id: 18, title: 'QCM Algorithmes', grade: 17, max: 20, date: '2024-11-22', type: 'QCM', coefficient: 1 },
-          ],
-        },
-      ],
-      globalAverage: 15.2,
-      classGlobalAverage: 13.1,
-      rank: 5,
-      totalStudents: 32,
-      trimester: 'Trimestre 1',
+    const fetchGrades = async () => {
+      try {
+        setLoading(true);
+        if (!user) return;
+
+        const response = await gradeAPI.getAll({ student_id: user.id });
+        const data = response.data || [];
+
+        // Process grades
+        const subjectsMap = {};
+        const colors = ['#3B82F6', '#8B5CF6', '#EF4444', '#F59E0B', '#EC4899', '#10B981', '#6366F1'];
+        let colorIndex = 0;
+
+        data.forEach(g => {
+          const subjName = g.subject_name || 'Matière Inconnue';
+          if (!subjectsMap[subjName]) {
+            subjectsMap[subjName] = {
+              name: subjName,
+              code: g.subject_id,
+              teacher: g.recorded_by_name || 'N/A',
+              average: 0,
+              classAverage: 0, // Not available yet
+              coefficient: 1, // Default
+              color: colors[colorIndex % colors.length],
+              grades: []
+            };
+            colorIndex++;
+          }
+
+          subjectsMap[subjName].grades.push({
+            id: g.id,
+            title: g.exam_title || g.grade_type || 'Note', // 'notes' field is description usually
+            notes: g.notes,
+            grade: parseFloat(g.value),
+            max: parseFloat(g.max_value),
+            date: new Date(g.created_at).toLocaleDateString(),
+            type: g.grade_type,
+            coefficient: parseFloat(g.weight || 1)
+          });
+        });
+
+        // Calculate averages
+        const subjects = Object.values(subjectsMap).map(subj => {
+          let totalScore = 0;
+          let totalWeight = 0;
+
+          subj.grades.forEach(g => {
+            const normalizedScore = (g.grade / g.max) * 20; // Normalize to 20
+            totalScore += normalizedScore * g.coefficient;
+            totalWeight += g.coefficient;
+          });
+
+          subj.average = totalWeight > 0 ? (totalScore / totalWeight) : 0;
+          return subj;
+        });
+
+        // Global Average
+        let globalTotal = 0;
+        let globalWeight = 0;
+        subjects.forEach(s => {
+          globalTotal += s.average; // Simplification: assuming coef 1 for subjects for now as we don't have subject coefs in this query
+          globalWeight += 1;
+        });
+
+        const globalAverage = globalWeight > 0 ? (globalTotal / globalWeight) : 0;
+
+        setGrades({
+          subjects,
+          globalAverage: parseFloat(globalAverage.toFixed(2)),
+          classGlobalAverage: 0, // Placeholder
+          rank: 0, // Placeholder
+          totalStudents: 0,
+          trimester: 'Année 2024-2025'
+        });
+
+      } catch (error) {
+        console.error('Error fetching grades:', error);
+      } finally {
+        setLoading(false);
+      }
     };
-    
-    setTimeout(() => {
-      setGrades(sampleGrades);
-      setLoading(false);
-    }, 500);
-  }, []);
+
+    fetchGrades();
+  }, [user]);
 
   const getGradeColor = (grade, max = 20) => {
     const percentage = (grade / max) * 100;
@@ -243,12 +231,11 @@ const StudentGradesPage = () => {
                       <span className="text-gray-400">vs {subject.classAverage}</span>
                     </div>
                   </div>
-                  <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${
-                    expandedSubject === subject.code ? 'rotate-180' : ''
-                  }`} />
+                  <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${expandedSubject === subject.code ? 'rotate-180' : ''
+                    }`} />
                 </div>
               </div>
-              
+
               {/* Progress bar */}
               <div className="mt-4">
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
