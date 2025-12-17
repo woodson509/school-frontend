@@ -44,7 +44,7 @@ const TeacherLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState(['teaching']);
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   const toggleMenu = (menuId) => {
     setExpandedMenus(prev =>
