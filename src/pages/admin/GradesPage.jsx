@@ -82,8 +82,11 @@ const GradesPage = () => {
       const dumpResponse = await fetch(`${API_BASE}/debug/dump-grades`);
       const dumpData = await dumpResponse.json();
 
-      // Filter by class_id
-      const filteredGrades = dumpData.filter(g => g.class_id === selectedClass);
+      // Filter by class_id AND subject_id
+      const filteredGrades = dumpData.filter(g =>
+        g.class_id === selectedClass &&
+        g.subject_id === selectedSubject
+      );
 
       const studentsRes = await userAPI.getAll({ role: 'student', class_id: selectedClass });
 
@@ -109,17 +112,21 @@ const GradesPage = () => {
   const groupedGrades = students.map(student => {
     const studentGrades = grades.filter(g => g.student_id === student.id);
     const total = studentGrades.reduce((sum, g) => {
-      const percentage = (parseFloat(g.value) / parseFloat(g.max_value)) * 100;
-      return sum + (percentage * parseFloat(g.weight));
+      const value = parseFloat(g.value) || 0;
+      const maxValue = parseFloat(g.max_value) || 20; // Default to 20 if missing
+      const weight = parseFloat(g.weight) || 1; // Default to 1 if missing
+      const percentage = (value / maxValue) * 100;
+      return sum + (percentage * weight);
     }, 0);
-    const totalWeight = studentGrades.reduce((sum, g) => sum + parseFloat(g.weight), 0);
+    const totalWeight = studentGrades.reduce((sum, g) => sum + (parseFloat(g.weight) || 1), 0);
     const average = totalWeight > 0 ? total / totalWeight : 0;
-    const averageOnScale = (average / 100) * parseFloat(gradingScale.max_value);
+    const maxScale = parseFloat(gradingScale?.max_value) || 20;
+    const averageOnScale = (average / 100) * maxScale;
 
     return {
       student,
       grades: studentGrades,
-      average: averageOnScale.toFixed(2)
+      average: isNaN(averageOnScale) ? '0.00' : averageOnScale.toFixed(2)
     };
   });
 
