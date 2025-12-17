@@ -18,30 +18,68 @@ import {
   Eye,
   ChevronRight,
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { assignmentAPI } from '../../services/api';
 
 const StudentAssignmentsPage = () => {
+  const { user } = useAuth();
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [selectedAssignment, setSelectedAssignment] = useState(null);
 
   useEffect(() => {
-    const sampleAssignments = [
-      { id: 1, title: 'Exercices chapitre 5 - Intégrales', course: 'Mathématiques', teacher: 'M. Dupont', dueDate: '2024-12-17', status: 'pending', priority: 'high', description: 'Faire les exercices 1 à 15 du chapitre 5. Montrer tous les calculs.', attachments: ['exercices_ch5.pdf'], points: 20 },
-      { id: 2, title: 'Compte-rendu TP Optique', course: 'Physique', teacher: 'M. Bernard', dueDate: '2024-12-18', status: 'pending', priority: 'medium', description: 'Rédiger le compte-rendu du TP sur la réfraction de la lumière.', attachments: ['modele_cr.docx'], points: 15 },
-      { id: 3, title: 'Lecture pages 45-60', course: 'Français', teacher: 'Mme Martin', dueDate: '2024-12-19', status: 'pending', priority: 'low', description: 'Lire les pages 45 à 60 du roman et préparer un résumé.', attachments: [], points: 10 },
-      { id: 4, title: 'Dissertation: La mondialisation', course: 'Histoire', teacher: 'M. Robert', dueDate: '2024-12-20', status: 'pending', priority: 'high', description: 'Dissertation de 3 pages minimum sur les effets de la mondialisation.', attachments: ['consignes.pdf', 'sources.pdf'], points: 40 },
-      { id: 5, title: 'Projet Python - Calculatrice', course: 'Informatique', teacher: 'Mme Moreau', dueDate: '2024-12-16', status: 'submitted', priority: 'high', description: 'Créer une calculatrice graphique en Python avec Tkinter.', attachments: ['projet_specs.pdf'], points: 30, submittedDate: '2024-12-15', submittedFile: 'calculatrice.py' },
-      { id: 6, title: 'Exercices vocabulaire Unit 4', course: 'Anglais', teacher: 'Mme Petit', dueDate: '2024-12-14', status: 'graded', priority: 'medium', description: 'Compléter tous les exercices de vocabulaire de l\'unité 4.', attachments: [], points: 15, grade: 14, feedback: 'Bon travail! Attention aux faux-amis.' },
-      { id: 7, title: 'QCM Chimie Organique', course: 'Chimie', teacher: 'M. Simon', dueDate: '2024-12-13', status: 'graded', priority: 'low', description: 'QCM en ligne sur les hydrocarbures.', attachments: [], points: 20, grade: 18, feedback: 'Excellent!' },
-      { id: 8, title: 'Exposé sur la photosynthèse', course: 'Biologie', teacher: 'M. Leroy', dueDate: '2024-12-12', status: 'late', priority: 'high', description: 'Préparer un exposé de 10 minutes sur la photosynthèse.', attachments: ['grille_evaluation.pdf'], points: 25 },
-    ];
-    
-    setTimeout(() => {
-      setAssignments(sampleAssignments);
-      setLoading(false);
-    }, 500);
-  }, []);
+    const fetchAssignments = async () => {
+      try {
+        setLoading(true);
+        const response = await assignmentAPI.getAll();
+
+        if (response.success && Array.isArray(response.data)) {
+          const mappedAssignments = response.data.map(a => {
+            const dueDateObj = new Date(a.due_date);
+            const isLate = !a.submission_status && dueDateObj < new Date();
+
+            let status = 'pending';
+            if (a.submission_status) {
+              status = a.submission_status;
+            } else if (isLate) {
+              status = 'late';
+            }
+
+            // Calculate priority
+            const daysLeft = Math.ceil((dueDateObj - new Date()) / (1000 * 60 * 60 * 24));
+            let priority = 'low';
+            if (daysLeft <= 2) priority = 'high';
+            else if (daysLeft <= 5) priority = 'medium';
+
+            return {
+              id: a.id,
+              title: a.title,
+              course: a.course_title,
+              teacher: a.teacher_name || 'Enseignant',
+              dueDate: dueDateObj.toISOString().split('T')[0],
+              status: status,
+              priority: priority,
+              description: a.description,
+              attachments: [],
+              points: a.points,
+              grade: a.grade,
+              feedback: a.feedback,
+              submittedDate: a.submitted_at ? new Date(a.submitted_at).toLocaleDateString() : null,
+              submittedFile: 'Fichier soumis'
+            };
+          });
+          setAssignments(mappedAssignments);
+        }
+      } catch (error) {
+        console.error('Error fetching assignments:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAssignments();
+  }, [user]);
 
   const filteredAssignments = assignments.filter(a => {
     if (filter === 'all') return true;
@@ -200,14 +238,13 @@ const StudentAssignmentsPage = () => {
                         {assignment.points} pts
                       </div>
                       {assignment.status === 'pending' && daysRemaining >= 0 && (
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          daysRemaining <= 1 ? 'bg-red-100 text-red-700' :
+                        <span className={`text-xs px-2 py-1 rounded-full ${daysRemaining <= 1 ? 'bg-red-100 text-red-700' :
                           daysRemaining <= 3 ? 'bg-orange-100 text-orange-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}>
+                            'bg-gray-100 text-gray-700'
+                          }`}>
                           {daysRemaining === 0 ? 'Aujourd\'hui' :
-                           daysRemaining === 1 ? 'Demain' :
-                           `${daysRemaining} jours`}
+                            daysRemaining === 1 ? 'Demain' :
+                              `${daysRemaining} jours`}
                         </span>
                       )}
                     </div>
