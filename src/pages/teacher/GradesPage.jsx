@@ -93,10 +93,10 @@ const TeacherGradesPage = () => {
         const existingGrades = gradesRes.data || [];
 
         // Debug notification
-        // Debug notification
+        const debugPath = gradesRes._debug?.path || 'UNKNOWN';
         setNotification({
           type: 'info',
-          message: `STATUS: OK. Trouvé ${existingGrades.length} notes. (ExamID: ${selectedExamId}). Raw: ${JSON.stringify(existingGrades).substring(0, 50)}...`
+          message: `PATH: ${debugPath}. Notes: ${existingGrades.length}. Raw: ${JSON.stringify(existingGrades).substring(0, 80)}...`
         });
 
         // 3. Merge Data
