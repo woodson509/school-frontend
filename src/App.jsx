@@ -361,8 +361,8 @@ const AppRoutes = () => {
               {/* Learning Routes */}
               <Route path="courses" element={<StudentCoursesPage />} />
               <Route path="courses/:id" element={<StudentCourseDetailsPage />} />
-              <Route path="competencies" element={<StudentCompetenciesPage />} />
-              <Route path="badges" element={<StudentBadgesPage />} />
+              {/* <Route path="competencies" element={<StudentCompetenciesPage />} /> */}
+              {/* <Route path="badges" element={<StudentBadgesPage />} /> */}
               <Route path="schedule" element={<StudentSchedulePage />} />
               <Route path="assignments" element={<StudentAssignmentsPage />} />
               <Route path="exams" element={<StudentExamsPage />} />
@@ -370,23 +370,23 @@ const AppRoutes = () => {
               <Route path="attendance" element={<StudentAttendancePage />} />
 
               {/* Study Tools Routes */}
-              <Route path="planner" element={<StudentPlannerPage />} />
-              <Route path="notes" element={<StudentNotesPage />} />
-              <Route path="practice" element={<StudentPracticePage />} />
-              <Route path="resources" element={<StudentResourcesPage />} />
-              <Route path="bookmarks" element={<StudentBookmarksPage />} />
+              {/* <Route path="planner" element={<StudentPlannerPage />} /> */}
+              {/* <Route path="notes" element={<StudentNotesPage />} /> */}
+              {/* <Route path="practice" element={<StudentPracticePage />} /> */}
+              {/* <Route path="resources" element={<StudentResourcesPage />} /> */}
+              {/* <Route path="bookmarks" element={<StudentBookmarksPage />} /> */}
 
               {/* Community Routes */}
-              <Route path="forum" element={<StudentForumPage />} />
-              <Route path="groups" element={<StudentGroupsPage />} />
+              {/* <Route path="forum" element={<StudentForumPage />} /> */}
+              {/* <Route path="groups" element={<StudentGroupsPage />} /> */}
               <Route path="messages" element={<StudentMessagesPage />} />
 
               {/* Other Routes */}
               <Route path="calendar" element={<StudentCalendarPage />} />
               <Route path="announcements" element={<StudentAnnouncementsPage />} />
-              <Route path="certificates" element={<StudentCertificatesPage />} />
-              <Route path="progress" element={<StudentProgressPage />} />
-              <Route path="help" element={<StudentHelpPage />} />
+              {/* <Route path="certificates" element={<StudentCertificatesPage />} /> */}
+              {/* <Route path="progress" element={<StudentProgressPage />} /> */}
+              {/* <Route path="help" element={<StudentHelpPage />} /> */}
               <Route path="profile" element={<StudentProfilePage />} />
 
               {/* Exam route */}

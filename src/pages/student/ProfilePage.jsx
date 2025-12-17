@@ -3,7 +3,7 @@
  * Personal information and settings
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   User,
   Mail,
@@ -18,24 +18,30 @@ import {
   Shield,
   Globe,
   Moon,
+  Loader
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { authAPI } from '../../services/api';
 
 const StudentProfilePage = () => {
+  const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
+  const [loading, setLoading] = useState(true);
+
   const [profile, setProfile] = useState({
-    firstName: 'Jean',
-    lastName: 'Pierre',
-    email: 'jean.pierre@example.com',
-    phone: '+509 1234-5678',
-    address: 'Port-au-Prince, Haïti',
-    birthDate: '2008-05-15',
-    class: '6ème A',
-    studentId: 'STU-2024-001',
-    enrolledDate: '2024-09-01',
-    parentName: 'Marie Pierre',
-    parentEmail: 'marie.pierre@example.com',
-    parentPhone: '+509 9876-5432',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: '',
+    birthDate: '',
+    class: '',
+    studentId: '',
+    enrolledDate: '',
+    parentName: '',
+    parentEmail: '',
+    parentPhone: '',
   });
 
   const [notifications, setNotifications] = useState({
@@ -53,6 +59,62 @@ const StudentProfilePage = () => {
     emailDigest: 'daily',
   });
 
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+
+        // Initial load from context
+        if (user) {
+          setProfile(prev => ({
+            ...prev,
+            firstName: user.full_name?.split(' ')[0] || '',
+            lastName: user.full_name?.split(' ').slice(1).join(' ') || '',
+            email: user.email || '',
+            studentId: `STU-${new Date().getFullYear()}-${user.id?.toString().padStart(3, '0') || '000'}`, // Mock ID format based on user ID
+            class: user.class_name || 'Non assigné', // Assuming class_name might be in user object or fetched
+            enrolledDate: new Date(user.created_at).toLocaleDateString('fr-FR') || new Date().toLocaleDateString('fr-FR')
+          }));
+        }
+
+        // Fetch extended profile if available
+        const response = await authAPI.getProfile();
+        if (response.success && response.data) {
+          const data = response.data;
+          setProfile(prev => ({
+            ...prev,
+            firstName: data.full_name?.split(' ')[0] || prev.firstName,
+            lastName: data.full_name?.split(' ').slice(1).join(' ') || prev.lastName,
+            email: data.email || prev.email,
+            phone: data.phone || '',
+            address: data.address || '',
+            birthDate: data.birth_date || '',
+            studentId: data.student_id || prev.studentId,
+            class: data.class_name || prev.class,
+            parentName: data.parent_name || '',
+            parentEmail: data.parent_email || '',
+            parentPhone: data.parent_phone || ''
+          }));
+        }
+
+      } catch (error) {
+        console.error("Error fetching profile", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchProfile();
+  }, [user]);
+
+  if (loading && !profile.email) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader className="w-12 h-12 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -60,11 +122,9 @@ const StudentProfilePage = () => {
         <div className="flex flex-col md:flex-row items-center gap-6">
           <div className="relative">
             <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center text-4xl font-bold">
-              JP
+              {profile.firstName?.charAt(0) || 'U'}
             </div>
-            <button className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg">
-              <Camera className="w-4 h-4 text-gray-600" />
-            </button>
+            {/* Camera button removed for simplicity/not functional yet */}
           </div>
           <div className="text-center md:text-left">
             <h1 className="text-2xl font-bold">{profile.firstName} {profile.lastName}</h1>
@@ -74,11 +134,10 @@ const StudentProfilePage = () => {
           <div className="md:ml-auto">
             <button
               onClick={() => setIsEditing(!isEditing)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                isEditing 
-                  ? 'bg-white text-emerald-600' 
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${isEditing
+                  ? 'bg-white text-emerald-600'
                   : 'bg-white/20 text-white hover:bg-white/30'
-              }`}
+                }`}
             >
               {isEditing ? (
                 <>
@@ -102,44 +161,40 @@ const StudentProfilePage = () => {
           <div className="flex overflow-x-auto">
             <button
               onClick={() => setActiveTab('personal')}
-              className={`px-6 py-4 font-medium whitespace-nowrap transition-colors ${
-                activeTab === 'personal'
+              className={`px-6 py-4 font-medium whitespace-nowrap transition-colors ${activeTab === 'personal'
                   ? 'text-emerald-600 border-b-2 border-emerald-600'
                   : 'text-gray-500 hover:text-gray-700'
-              }`}
+                }`}
             >
               <User className="w-4 h-4 inline-block mr-2" />
               Informations
             </button>
             <button
               onClick={() => setActiveTab('notifications')}
-              className={`px-6 py-4 font-medium whitespace-nowrap transition-colors ${
-                activeTab === 'notifications'
+              className={`px-6 py-4 font-medium whitespace-nowrap transition-colors ${activeTab === 'notifications'
                   ? 'text-emerald-600 border-b-2 border-emerald-600'
                   : 'text-gray-500 hover:text-gray-700'
-              }`}
+                }`}
             >
               <Bell className="w-4 h-4 inline-block mr-2" />
               Notifications
             </button>
             <button
               onClick={() => setActiveTab('security')}
-              className={`px-6 py-4 font-medium whitespace-nowrap transition-colors ${
-                activeTab === 'security'
+              className={`px-6 py-4 font-medium whitespace-nowrap transition-colors ${activeTab === 'security'
                   ? 'text-emerald-600 border-b-2 border-emerald-600'
                   : 'text-gray-500 hover:text-gray-700'
-              }`}
+                }`}
             >
               <Shield className="w-4 h-4 inline-block mr-2" />
               Sécurité
             </button>
             <button
               onClick={() => setActiveTab('preferences')}
-              className={`px-6 py-4 font-medium whitespace-nowrap transition-colors ${
-                activeTab === 'preferences'
+              className={`px-6 py-4 font-medium whitespace-nowrap transition-colors ${activeTab === 'preferences'
                   ? 'text-emerald-600 border-b-2 border-emerald-600'
                   : 'text-gray-500 hover:text-gray-700'
-              }`}
+                }`}
             >
               <Globe className="w-4 h-4 inline-block mr-2" />
               Préférences
@@ -159,7 +214,7 @@ const StudentProfilePage = () => {
                     type="text"
                     value={profile.firstName}
                     disabled={!isEditing}
-                    onChange={(e) => setProfile({...profile, firstName: e.target.value})}
+                    onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:bg-gray-50"
                   />
                 </div>
@@ -169,7 +224,7 @@ const StudentProfilePage = () => {
                     type="text"
                     value={profile.lastName}
                     disabled={!isEditing}
-                    onChange={(e) => setProfile({...profile, lastName: e.target.value})}
+                    onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:bg-gray-50"
                   />
                 </div>
@@ -193,7 +248,7 @@ const StudentProfilePage = () => {
                       type="tel"
                       value={profile.phone}
                       disabled={!isEditing}
-                      onChange={(e) => setProfile({...profile, phone: e.target.value})}
+                      onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg disabled:bg-gray-50"
                     />
                   </div>
@@ -206,7 +261,7 @@ const StudentProfilePage = () => {
                       type="text"
                       value={profile.address}
                       disabled={!isEditing}
-                      onChange={(e) => setProfile({...profile, address: e.target.value})}
+                      onChange={(e) => setProfile({ ...profile, address: e.target.value })}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg disabled:bg-gray-50"
                     />
                   </div>
@@ -218,8 +273,9 @@ const StudentProfilePage = () => {
                     <input
                       type="date"
                       value={profile.birthDate}
-                      disabled
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                      disabled={!isEditing}
+                      onChange={(e) => setProfile({ ...profile, birthDate: e.target.value })}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg disabled:bg-gray-50"
                     />
                   </div>
                 </div>
@@ -245,16 +301,34 @@ const StudentProfilePage = () => {
                 <h3 className="font-semibold text-gray-800 mt-6">Contact parent/tuteur</h3>
                 <div className="p-4 bg-gray-50 rounded-lg space-y-3">
                   <div>
-                    <span className="text-sm text-gray-500">Nom</span>
-                    <p className="font-medium">{profile.parentName}</p>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Nom</label>
+                    <input
+                      type="text"
+                      value={profile.parentName}
+                      disabled={!isEditing}
+                      onChange={(e) => setProfile({ ...profile, parentName: e.target.value })}
+                      className="w-full px-3 py-1 border border-gray-300 rounded-md disabled:bg-gray-50"
+                    />
                   </div>
                   <div>
-                    <span className="text-sm text-gray-500">Email</span>
-                    <p className="font-medium">{profile.parentEmail}</p>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={profile.parentEmail}
+                      disabled={!isEditing}
+                      onChange={(e) => setProfile({ ...profile, parentEmail: e.target.value })}
+                      className="w-full px-3 py-1 border border-gray-300 rounded-md disabled:bg-gray-50"
+                    />
                   </div>
                   <div>
-                    <span className="text-sm text-gray-500">Téléphone</span>
-                    <p className="font-medium">{profile.parentPhone}</p>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Téléphone</label>
+                    <input
+                      type="tel"
+                      value={profile.parentPhone}
+                      disabled={!isEditing}
+                      onChange={(e) => setProfile({ ...profile, parentPhone: e.target.value })}
+                      className="w-full px-3 py-1 border border-gray-300 rounded-md disabled:bg-gray-50"
+                    />
                   </div>
                 </div>
               </div>
@@ -275,7 +349,7 @@ const StudentProfilePage = () => {
                     <input
                       type="checkbox"
                       checked={notifications.email}
-                      onChange={(e) => setNotifications({...notifications, email: e.target.checked})}
+                      onChange={(e) => setNotifications({ ...notifications, email: e.target.checked })}
                       className="w-5 h-5 text-emerald-600 rounded"
                     />
                   </label>
@@ -287,7 +361,7 @@ const StudentProfilePage = () => {
                     <input
                       type="checkbox"
                       checked={notifications.push}
-                      onChange={(e) => setNotifications({...notifications, push: e.target.checked})}
+                      onChange={(e) => setNotifications({ ...notifications, push: e.target.checked })}
                       className="w-5 h-5 text-emerald-600 rounded"
                     />
                   </label>
@@ -308,7 +382,7 @@ const StudentProfilePage = () => {
                       <input
                         type="checkbox"
                         checked={notifications[item.key]}
-                        onChange={(e) => setNotifications({...notifications, [item.key]: e.target.checked})}
+                        onChange={(e) => setNotifications({ ...notifications, [item.key]: e.target.checked })}
                         className="w-5 h-5 text-emerald-600 rounded"
                       />
                     </label>
@@ -332,7 +406,8 @@ const StudentProfilePage = () => {
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
                         type="password"
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg"
+                        disabled={!isEditing}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg disabled:bg-gray-50"
                       />
                     </div>
                   </div>
@@ -344,7 +419,8 @@ const StudentProfilePage = () => {
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
                         type="password"
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg"
+                        disabled={!isEditing}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg disabled:bg-gray-50"
                       />
                     </div>
                   </div>
@@ -356,13 +432,17 @@ const StudentProfilePage = () => {
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
                         type="password"
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg"
+                        disabled={!isEditing}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg disabled:bg-gray-50"
                       />
                     </div>
                   </div>
-                  <button className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
-                    Mettre à jour
-                  </button>
+                  {isEditing && (
+                    <button className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
+                      Mettre à jour
+                    </button>
+                  )}
+                  {!isEditing && <p className="text-sm text-gray-500 italic">Activez le mode modification pour changer le mot de passe.</p>}
                 </div>
               </div>
 
@@ -389,7 +469,7 @@ const StudentProfilePage = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Langue</label>
                 <select
                   value={preferences.language}
-                  onChange={(e) => setPreferences({...preferences, language: e.target.value})}
+                  onChange={(e) => setPreferences({ ...preferences, language: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                 >
                   <option value="fr">Français</option>
@@ -401,29 +481,27 @@ const StudentProfilePage = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Thème</label>
                 <div className="flex gap-4">
-                  <label className={`flex-1 flex items-center justify-center gap-2 p-3 border-2 rounded-lg cursor-pointer ${
-                    preferences.theme === 'light' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'
-                  }`}>
+                  <label className={`flex-1 flex items-center justify-center gap-2 p-3 border-2 rounded-lg cursor-pointer ${preferences.theme === 'light' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'
+                    }`}>
                     <input
                       type="radio"
                       name="theme"
                       value="light"
                       checked={preferences.theme === 'light'}
-                      onChange={(e) => setPreferences({...preferences, theme: e.target.value})}
+                      onChange={(e) => setPreferences({ ...preferences, theme: e.target.value })}
                       className="sr-only"
                     />
                     <Globe className="w-5 h-5" />
                     Clair
                   </label>
-                  <label className={`flex-1 flex items-center justify-center gap-2 p-3 border-2 rounded-lg cursor-pointer ${
-                    preferences.theme === 'dark' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'
-                  }`}>
+                  <label className={`flex-1 flex items-center justify-center gap-2 p-3 border-2 rounded-lg cursor-pointer ${preferences.theme === 'dark' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'
+                    }`}>
                     <input
                       type="radio"
                       name="theme"
                       value="dark"
                       checked={preferences.theme === 'dark'}
-                      onChange={(e) => setPreferences({...preferences, theme: e.target.value})}
+                      onChange={(e) => setPreferences({ ...preferences, theme: e.target.value })}
                       className="sr-only"
                     />
                     <Moon className="w-5 h-5" />
@@ -438,7 +516,7 @@ const StudentProfilePage = () => {
                 </label>
                 <select
                   value={preferences.emailDigest}
-                  onChange={(e) => setPreferences({...preferences, emailDigest: e.target.value})}
+                  onChange={(e) => setPreferences({ ...preferences, emailDigest: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                 >
                   <option value="never">Jamais</option>
