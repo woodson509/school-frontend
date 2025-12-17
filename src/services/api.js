@@ -721,6 +721,26 @@ export const enrollmentAPI = {
       method: 'DELETE',
     });
   },
+
+  getMyEnrollment: async (courseId) => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (!userStr) return { success: false, message: 'User not found locally' };
+      const user = JSON.parse(userStr);
+
+      // Fetch all student enrollments and filter
+      const response = await fetchWithAuth(`/students/${user.id}/enrollments`);
+
+      if (response && Array.isArray(response.data)) {
+        const enrollment = response.data.find(e => e.course_id == courseId);
+        return { success: true, data: enrollment || null };
+      }
+      return { success: false, message: 'Failed to fetch enrollments' };
+    } catch (error) {
+      console.error('Error fetching my enrollment:', error);
+      return { success: false, error };
+    }
+  },
 };
 
 /**
