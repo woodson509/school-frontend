@@ -232,11 +232,11 @@ const TeacherLayout = () => {
           <div className="p-4 border-t border-indigo-700/50">
             <div className="flex items-center gap-3 px-3 py-2">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-                MD
+                {user?.full_name?.charAt(0) || 'P'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">M. Dupont</p>
-                <p className="text-xs text-indigo-300 truncate">Mathématiques</p>
+                <p className="text-sm font-medium text-white truncate">{user?.full_name || 'Professeur'}</p>
+                <p className="text-xs text-indigo-300 truncate">Enseignant</p>
               </div>
             </div>
             <button
@@ -263,8 +263,8 @@ const TeacherLayout = () => {
                 <Menu className="w-6 h-6" />
               </button>
               <div>
-                <h2 className="text-xl font-bold text-gray-800">Bonjour, M. Dupont 👋</h2>
-                <p className="text-sm text-gray-500">Vous avez 3 cours aujourd'hui</p>
+                <h2 className="text-xl font-bold text-gray-800">Bonjour, {user?.full_name || 'Professeur'} 👋</h2>
+                <p className="text-sm text-gray-500">Bienvenue sur votre espace enseignant</p>
               </div>
             </div>
 
