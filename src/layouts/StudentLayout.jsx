@@ -87,7 +87,6 @@ const StudentLayout = () => {
       path: '/announcements',
       icon: Bell,
     },
-    /*
     {
       name: 'Apprentissage',
       icon: BookOpen,
@@ -126,20 +125,9 @@ const StudentLayout = () => {
       ],
     },
     {
-      name: 'Calendrier',
-      path: '/calendar',
-      icon: Calendar,
-    },
-    {
-      name: 'Annonces',
-      path: '/announcements',
-      icon: Bell,
-    },
-    {
       name: 'Certificats',
       path: '/certificates',
-      icon: Award, 
-    }
+      icon: Award,
     },
     {
       name: 'Progression',
@@ -151,7 +139,6 @@ const StudentLayout = () => {
       path: '/help',
       icon: HelpCircle,
     },
-    */
   ];
 
   const toggleSubmenu = (key) => {
