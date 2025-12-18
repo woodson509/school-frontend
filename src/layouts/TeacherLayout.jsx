@@ -61,12 +61,12 @@ const TeacherLayout = () => {
       icon: BookOpen,
       children: [
         { path: '/courses', label: 'Mes cours', icon: BookOpen },
-        // { path: '/subjects', label: 'Matières', icon: BookMarked },
-        // { path: '/curricula', label: 'Programmes', icon: Layers },
+        { path: '/subjects', label: 'Matières', icon: BookMarked },
+        { path: '/curricula', label: 'Programmes', icon: Layers },
         { path: '/classes', label: 'Mes classes', icon: Users },
         { path: '/schedule', label: 'Emploi du temps', icon: Calendar },
-        // { path: '/lesson-planner', label: 'Planificateur', icon: Target },
-        // { path: '/library', label: 'Ressources', icon: Folder },
+        { path: '/lesson-planner', label: 'Planificateur', icon: Target },
+        { path: '/library', label: 'Ressources', icon: Folder },
       ],
     },
     {
@@ -75,12 +75,12 @@ const TeacherLayout = () => {
       icon: ClipboardList,
       children: [
         { path: '/assignments', label: 'Devoirs', icon: FileText },
-        // { path: '/grading', label: 'Correction', icon: FileCheck },
+        { path: '/grading', label: 'Correction', icon: FileCheck },
         { path: '/exams', label: 'Examens', icon: ClipboardList },
-        // { path: '/competencies', label: 'Compétences', icon: Target },
-        // { path: '/badges', label: 'Badges', icon: Award },
-        // { path: '/quiz-builder', label: 'Créateur de quiz', icon: Lightbulb },
-        // { path: '/question-bank', label: 'Banque de questions', icon: Database },
+        { path: '/competencies', label: 'Compétences', icon: Target },
+        { path: '/badges', label: 'Badges', icon: Award },
+        { path: '/quiz-builder', label: 'Créateur de quiz', icon: Lightbulb },
+        { path: '/question-bank', label: 'Banque de questions', icon: Database },
         { path: '/grades', label: 'Notes', icon: BarChart3 },
       ],
     },
@@ -91,9 +91,9 @@ const TeacherLayout = () => {
       children: [
         { path: '/students', label: 'Liste élèves', icon: Users },
         { path: '/attendance', label: 'Présences', icon: CheckSquare },
-        // { path: '/student-progress', label: 'Suivi individuel', icon: TrendingUp },
-        // { path: '/class-analytics', label: 'Analyse de classe', icon: BarChart3 },
-        // { path: '/reports', label: 'Bulletins', icon: FileText },
+        { path: '/student-progress', label: 'Suivi individuel', icon: TrendingUp },
+        { path: '/class-analytics', label: 'Analyse de classe', icon: BarChart3 },
+        { path: '/reports', label: 'Bulletins', icon: FileText },
       ],
     },
     {
@@ -101,9 +101,9 @@ const TeacherLayout = () => {
       label: 'Communication',
       icon: MessageSquare,
       children: [
-        // { path: '/messages', label: 'Messages', icon: MessageSquare },
-        // { path: '/announcements', label: 'Annonces', icon: Bell },
-        // { path: '/parent-reports', label: 'Rapports parents', icon: FileText },
+        { path: '/messages', label: 'Messages', icon: MessageSquare },
+        { path: '/announcements', label: 'Annonces', icon: Bell },
+        { path: '/parent-reports', label: 'Rapports parents', icon: FileText },
       ],
     },
     {
@@ -111,9 +111,9 @@ const TeacherLayout = () => {
       label: 'Outils',
       icon: Layers,
       children: [
-        // { path: '/calendar', label: 'Calendrier', icon: Calendar },
-        // { path: '/collaboration', label: 'Collaboration', icon: Share2 },
-        // { path: '/library', label: 'Ma bibliothèque', icon: BookMarked },
+        { path: '/calendar', label: 'Calendrier', icon: Calendar },
+        { path: '/collaboration', label: 'Collaboration', icon: Share2 },
+        { path: '/my-library', label: 'Ma bibliothèque', icon: BookMarked },
       ],
     },
   ];
